@@ -29,7 +29,7 @@ export default function Onboarding() {
 
       <View className='px-4 pb-8'>
         <View className='items-center -mb-8 z-20'>
-          <View className='w-16 h-16 rounded-full bg-white items-center justify-center shadow-lg border border-emerald-100'>
+          <View className='w-16 h-16 rounded-full bg-white items-center justify-center shadow-sm border border-emerald-100'>
             <Ionicons name='location-outline' size={26} color='#0C6B4A' />
           </View>
         </View>
