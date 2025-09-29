@@ -44,21 +44,26 @@ export default function MapCard({
         onRegionChangeComplete={setRegion}
         onMapReady={onMapReady}
         showsUserLocation={!locationPermissionDenied}
-        showsMyLocationButton
+        showsMyLocationButton={false} // ← Try disabling this
         onPress={onMapPress}
-        loadingEnabled
+        loadingEnabled={true}
         loadingIndicatorColor='#059669'
         loadingBackgroundColor='#f3f4f6'
         mapType='standard'
         showsCompass={false}
-        showsScale
-        showsBuildings
+        showsScale={false} // ← Try disabling
+        showsBuildings={false} // ← Try disabling
         showsTraffic={false}
-        showsIndoors
-        rotateEnabled
-        scrollEnabled
-        zoomEnabled
+        showsIndoors={false} // ← Try disabling
+        rotateEnabled={true}
+        scrollEnabled={true}
+        zoomEnabled={true}
         pitchEnabled={false}
+        // ADD THESE:
+        moveOnMarkerPress={false}
+        showsPointsOfInterest={false}
+        toolbarEnabled={false}
+        cacheEnabled={true}
       >
         <Marker
           coordinate={{
