@@ -1,6 +1,13 @@
 // app/address/coverage.tsx
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, Platform, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  Platform,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -40,6 +47,28 @@ export default function DeliveryCoverage() {
           },
     [def]
   );
+
+  function goToHomeWithAddress() {
+    if (!def) {
+      Alert.alert(
+        'No address selected',
+        'Please choose or set a default address first.'
+      );
+      return;
+    }
+
+    // Send address to Home via params (Home can also read from the store).
+    router.replace({
+      pathname: '/(tabs)/home',
+      params: {
+        from: 'coverage',
+        addressLabel: def.label ?? '',
+        addressDetails: def.details ?? '',
+        lat: String(def.lat),
+        lng: String(def.lng),
+      },
+    });
+  }
 
   return (
     <SafeAreaView className='flex-1 bg-neutral-50'>
@@ -170,13 +199,13 @@ export default function DeliveryCoverage() {
         </View>
       </ScrollView>
 
-      {/* Sticky Footer CTA (not absolute; uses safe-area bottom) */}
+      {/* Sticky Footer CTA */}
       <View
         className='px-4 border-t border-neutral-200 bg-neutral-50'
         style={{ paddingBottom: insets.bottom + 12, paddingTop: 12 }}
       >
         <Pressable
-          onPress={() => router.replace('/(tabs)/home')}
+          onPress={goToHomeWithAddress}
           disabled={!hasAddress}
           className={`h-12 rounded-xl items-center justify-center ${
             hasAddress ? 'bg-emerald-600' : 'bg-neutral-300'

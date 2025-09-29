@@ -12,7 +12,7 @@ function TabBar({ state, descriptors, navigation }: any) {
       edges={['bottom']}
       className='bg-white border-t border-neutral-200'
     >
-      <View className='flex-row items-stretch justify-between px-4 py-6'>
+      <View className='flex-row items-stretch justify-between px-4 py-2'>
         {state.routes.map((route: any, index: number) => {
           const { options } = descriptors[route.key];
           const label =
@@ -37,7 +37,6 @@ function TabBar({ state, descriptors, navigation }: any) {
             navigation.emit({ type: 'tabLongPress', target: route.key });
           };
 
-          // Icon renderer from options.tabBarIcon
           const Icon = options.tabBarIcon
             ? options.tabBarIcon({
                 focused: isFocused,
@@ -57,14 +56,15 @@ function TabBar({ state, descriptors, navigation }: any) {
               <View className='items-center justify-center'>
                 {Icon}
                 <Text
-                  className={`mt-1 text-xs ${isFocused ? 'text-emerald-700 font-semibold' : 'text-neutral-500'}`}
+                  className={`mt-1 text-xs ${
+                    isFocused
+                      ? 'text-emerald-700 font-semibold'
+                      : 'text-neutral-500'
+                  }`}
                 >
                   {label}
                 </Text>
-                {/* Active pill */}
-                <View
-                  className={`h-1 w-6 rounded-full mt-2 ${isFocused ? 'bg-emerald-600' : 'bg-transparent'}`}
-                />
+                {/* underline/pill removed */}
               </View>
             </Pressable>
           );
@@ -78,7 +78,7 @@ export default function TabsLayout() {
   const iconFor = (name: string, focused: boolean) => {
     const color = focused ? '#065F46' : '#6B7280';
     switch (name) {
-      case 'home/index':
+      case 'home':
         return (
           <Ionicons
             name={focused ? 'home' : 'home-outline'}
@@ -86,7 +86,7 @@ export default function TabsLayout() {
             color={color}
           />
         );
-      case 'cart/index':
+      case 'cart':
         return (
           <Ionicons
             name={focused ? 'cart' : 'cart-outline'}
@@ -94,7 +94,7 @@ export default function TabsLayout() {
             color={color}
           />
         );
-      case 'orders/index':
+      case 'orders':
         return (
           <Ionicons
             name={focused ? 'receipt' : 'receipt-outline'}
@@ -102,7 +102,7 @@ export default function TabsLayout() {
             color={color}
           />
         );
-      case 'settings/index':
+      case 'settings':
         return (
           <Ionicons
             name={focused ? 'settings' : 'settings-outline'}
@@ -117,40 +117,39 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      // Keyboard dismiss + safe styles
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarHideOnKeyboard: true, // RN Navigation v6 option
+        tabBarHideOnKeyboard: true,
       }}
       tabBar={(props) => <TabBar {...props} />}
     >
       <Tabs.Screen
-        name='home/index'
+        name='home'
         options={{
           title: 'Shop',
-          tabBarIcon: ({ focused }) => iconFor('home/index', focused),
+          tabBarIcon: ({ focused }) => iconFor('home', focused),
         }}
       />
       <Tabs.Screen
-        name='cart/index'
+        name='cart'
         options={{
           title: 'Cart',
-          tabBarIcon: ({ focused }) => iconFor('cart/index', focused),
+          tabBarIcon: ({ focused }) => iconFor('cart', focused),
         }}
       />
       <Tabs.Screen
-        name='orders/index'
+        name='orders'
         options={{
           title: 'Orders',
-          tabBarIcon: ({ focused }) => iconFor('orders/index', focused),
+          tabBarIcon: ({ focused }) => iconFor('orders', focused),
         }}
       />
       <Tabs.Screen
-        name='settings/index'
+        name='settings'
         options={{
           title: 'Settings',
-          tabBarIcon: ({ focused }) => iconFor('settings/index', focused),
+          tabBarIcon: ({ focused }) => iconFor('settings', focused),
         }}
       />
     </Tabs>
