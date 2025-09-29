@@ -1,25 +1,28 @@
 // app/address/coverage.tsx
 import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  Platform,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { View, Text, Pressable, Alert, ScrollView } from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+
+// ✅ Import the wrapper (LET PLATFORM CHOOSE .native or .web)
+import MapCard from '@/components/address/MapCard';
 
 import { useAddressesStore } from '@/stores/addresses.store';
 import { HeaderBar } from '@/components/address/HeaderBar';
 
 const NGN = (n: number) => `NGN ${n.toLocaleString('en-NG')}`;
+
+// Define a local Region type so we don't import from 'react-native-maps' on web
+type Region = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+};
 
 export default function DeliveryCoverage() {
   const insets = useSafeAreaInsets();
@@ -82,30 +85,32 @@ export default function DeliveryCoverage() {
         keyboardShouldPersistTaps='handled'
         showsVerticalScrollIndicator={false}
       >
-        {/* Map */}
+        {/* Map (platform-safe wrapper) */}
         <View
           className='mx-4 rounded-3xl overflow-hidden bg-neutral-200 border border-neutral-100'
           style={{ height: 200 }}
         >
-          <MapView
-            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-            style={{ flex: 1 }}
+          <MapCard
             region={region}
-            scrollEnabled
-            zoomEnabled
-            showsUserLocation={false}
-            showsMyLocationButton={false}
-            mapType='standard'
-          >
-            {hasAddress && (
-              <Marker
-                coordinate={{ latitude: def!.lat, longitude: def!.lng }}
-                title={def!.label}
-                description={def!.details ?? undefined}
-                pinColor='#0C6B4A'
-              />
-            )}
-          </MapView>
+            setRegion={() => {}}
+            onMapReady={() => {}}
+            mapReady={true}
+            locationPermissionDenied={false}
+            addresses={
+              hasAddress
+                ? [
+                    {
+                      id: def!.id ?? 'default',
+                      label: def!.label,
+                      details: def!.details,
+                      lat: def!.lat,
+                      lng: def!.lng,
+                      isDefault: true,
+                    },
+                  ]
+                : []
+            }
+          />
 
           {/* subtle top-right chip */}
           <View className='absolute right-3 top-3 px-3 py-1 rounded-full bg-white/90 border border-neutral-200'>
@@ -212,7 +217,9 @@ export default function DeliveryCoverage() {
           }`}
         >
           <Text
-            className={`font-semibold ${hasAddress ? 'text-white' : 'text-neutral-600'}`}
+            className={`font-semibold ${
+              hasAddress ? 'text-white' : 'text-neutral-600'
+            }`}
           >
             Continue
           </Text>
