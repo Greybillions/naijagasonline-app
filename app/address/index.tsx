@@ -18,7 +18,7 @@ import { router } from 'expo-router';
 
 import { useAddressesStore } from '@/stores/addresses.store';
 import { HeaderBar } from '@/components/address/HeaderBar';
-import { MapCard } from '@/components/address/MapCard';
+import MapCard from '@/components/address/MapCard';
 import { SearchBox } from '@/components/address/SearchBox';
 import { SuggestionList } from '@/components/address/SuggestionList';
 import { SavedAddressesList } from '@/components/address/SavedAddressesList';

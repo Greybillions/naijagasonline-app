@@ -1,7 +1,6 @@
-// components/address/MapCard.tsx
+import React from 'react';
 import { View, Text, ActivityIndicator, Platform } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
-import React from 'react';
 
 type Addr = {
   id: string;
@@ -20,10 +19,10 @@ type Props = {
   locationPermissionDenied: boolean;
   addresses: Addr[];
   onMapPress?: () => void;
-  children?: React.ReactNode; // <- NEW: overlay content (e.g., SearchBox)
+  children?: React.ReactNode;
 };
 
-export function MapCard({
+export default function MapCard({
   region,
   setRegion,
   onMapReady,
@@ -31,7 +30,7 @@ export function MapCard({
   locationPermissionDenied,
   addresses,
   onMapPress,
-  children, // <- NEW
+  children,
 }: Props) {
   return (
     <View
@@ -52,7 +51,7 @@ export function MapCard({
         loadingBackgroundColor='#f3f4f6'
         mapType='standard'
         showsCompass={false}
-        showsScale={true}
+        showsScale
         showsBuildings
         showsTraffic={false}
         showsIndoors
@@ -61,7 +60,6 @@ export function MapCard({
         zoomEnabled
         pitchEnabled={false}
       >
-        {/* Current map center marker */}
         <Marker
           coordinate={{
             latitude: region.latitude,
@@ -71,8 +69,6 @@ export function MapCard({
           description={'Tap "Select Map Location" to use this spot'}
           pinColor='#059669'
         />
-
-        {/* Saved address markers */}
         {addresses.map((addr) => (
           <Marker
             key={addr.id}
@@ -84,7 +80,6 @@ export function MapCard({
         ))}
       </MapView>
 
-      {/* Card-local overlay area */}
       {children ? (
         <View className='absolute left-3 right-3 top-3'>{children}</View>
       ) : null}

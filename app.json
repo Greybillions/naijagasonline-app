@@ -54,6 +54,8 @@
       },
       "permissions": [
         "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ]
     },
@@ -92,6 +94,12 @@
       "eas": {
         "projectId": "4f64cd26-8894-40b1-b00f-a3e80c822225"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/4f64cd26-8894-40b1-b00f-a3e80c822225"
     }
   }
 }
