@@ -58,7 +58,7 @@ export default function SettingsScreen() {
         <Section title='ACCOUNT'>
           <SettingRow
             icon='location-outline'
-            tint='emerald'
+            tint='primary'
             title='Addresses'
             subtitle='Manage delivery locations'
             onPress={() => router.push('/address')}
@@ -68,21 +68,22 @@ export default function SettingsScreen() {
         <Section title='APP SETTINGS'>
           <SettingRow
             icon='notifications-outline'
-            tint='emerald'
+            tint='primary'
             title='Notifications & Reminders'
             subtitle='Order updates & gas reminders'
             right={
               <Switch
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
-                thumbColor={notificationsEnabled ? '#10B981' : undefined}
-                trackColor={{ false: '#E5E7EB', true: '#A7F3D0' }}
+                // brand colours for Switch (RN requires raw colours, not classes)
+                thumbColor={notificationsEnabled ? '#020084' : undefined}
+                trackColor={{ false: '#E5E7EB', true: '#a0a0ff' }} // ~primary-200
               />
             }
           />
           <SettingRow
             icon='cloud-outline'
-            tint='emerald'
+            tint='primary'
             title='Local Backup & Restore'
             subtitle='Export or import your data'
             onPress={() =>
@@ -104,7 +105,7 @@ export default function SettingsScreen() {
         <Section title='SUPPORT'>
           <SettingRow
             icon='help-circle-outline'
-            tint='emerald'
+            tint='primary'
             title='Help & Safety'
             subtitle='Get assistance and find answers'
             onPress={
@@ -113,7 +114,7 @@ export default function SettingsScreen() {
           />
           <SettingRow
             icon='information-circle-outline'
-            tint='emerald'
+            tint='primary'
             title='About'
             subtitle={`v1.0.0 • NaijaGasOnline • ${Platform.OS}`}
             onPress={() => Alert.alert('About', 'NaijaGasOnline v1.0.0')}
@@ -147,21 +148,21 @@ function Section({
 
 function SettingRow({
   icon,
-  tint = 'emerald',
+  tint = 'primary',
   title,
   subtitle,
   right,
   onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
-  tint?: 'emerald' | 'red';
+  tint?: 'primary' | 'red';
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
   onPress?: () => void;
 }) {
-  const bg = tint === 'red' ? 'bg-red-100' : 'bg-emerald-100';
-  const color = tint === 'red' ? '#B91C1C' : '#065F46';
+  const bg = tint === 'red' ? 'bg-red-100' : 'bg-primary-100';
+  const color = tint === 'red' ? '#B91C1C' : '#020084';
 
   const content = (
     <View className='flex-row items-center p-4'>
@@ -173,14 +174,18 @@ function SettingRow({
 
       <View className='flex-1'>
         <Text
-          className={`font-semibold ${tint === 'red' ? 'text-red-700' : 'text-neutral-900'}`}
+          className={`font-semibold ${
+            tint === 'red' ? 'text-red-700' : 'text-neutral-900'
+          }`}
           numberOfLines={1}
         >
           {title}
         </Text>
         {!!subtitle && (
           <Text
-            className={`text-xs mt-0.5 ${tint === 'red' ? 'text-red-600' : 'text-neutral-500'}`}
+            className={`text-xs mt-0.5 ${
+              tint === 'red' ? 'text-red-600' : 'text-neutral-500'
+            }`}
             numberOfLines={2}
           >
             {subtitle}

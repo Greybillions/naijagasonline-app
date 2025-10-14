@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { supabase } from '@/lib/supabase';
 import { useCartStore } from '@/stores/cart.store';
+import HelpBanner from '@/components/home/HelpBanner';
 
 /* ----------------------------- types / helpers ---------------------------- */
 type Product = {
@@ -86,11 +87,11 @@ function ProductCard({
               {product.title}
             </Text>
             <View className='mt-1 flex-row items-center'>
-              <Text className='text-emerald-700'>{vendor}</Text>
+              <Text className='text-primary-700'>{vendor}</Text>
               <Ionicons
                 name='star'
                 size={12}
-                color='#10B981'
+                color='#020084'
                 style={{ marginLeft: 8 }}
               />
               <Text className='text-neutral-600 text-xs ml-1'>
@@ -125,7 +126,7 @@ function ProductCard({
           ) : (
             <Pressable
               onPress={onAdd}
-              className='w-9 h-9 rounded-full items-center justify-center bg-emerald-600'
+              className='w-9 h-9 rounded-full items-center justify-center bg-primary-600 active:bg-primary-700'
             >
               <Ionicons name='add' size={20} color='#fff' />
             </Pressable>
@@ -254,17 +255,17 @@ export default function HomeScreen() {
       {/* location + settings */}
       <View className='flex-row items-center justify-between mb-3'>
         <Pressable
-          className='flex-row items-center bg-white rounded-full px-3 py-2 border border-emerald-200'
+          className='flex-row items-center bg-white rounded-full px-3 py-2 border border-primary-200'
           onPress={() => router.push('/address')}
         >
-          <Ionicons name='location' size={16} color='#065F46' />
+          <Ionicons name='location' size={16} color='#020084' />
           <Text
-            className='ml-2 text-emerald-900 font-semibold'
+            className='ml-2 text-primary-900 font-semibold'
             numberOfLines={1}
           >
             {addressDetails || 'Choose address'}
           </Text>
-          <Ionicons name='chevron-down' size={16} color='#065F46' />
+          <Ionicons name='chevron-down' size={16} color='#020084' />
         </Pressable>
 
         <Pressable
@@ -276,7 +277,7 @@ export default function HomeScreen() {
           <Ionicons name='cart-outline' size={18} color='#111' />
 
           {itemCount > 0 && (
-            <View className='absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 items-center justify-center'>
+            <View className='absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-600 items-center justify-center'>
               <Text
                 className='text-white text-[10px] font-bold'
                 numberOfLines={1}
@@ -310,20 +311,7 @@ export default function HomeScreen() {
       </View>
 
       {/* banner */}
-      <View className='mt-4 bg-emerald-700 rounded-3xl px-5 py-5'>
-        <Text className='text-white text-lg font-extrabold'>
-          Refill & Save 10%
-        </Text>
-        <Text className='text-emerald-50 mt-1'>
-          Certified vendors. Fast delivery.
-        </Text>
-        <Pressable
-          onPress={() => router.push('/(tabs)/cart')}
-          className='self-end mt-3 bg-white rounded-full px-4 py-2'
-        >
-          <Text className='text-emerald-700 font-bold'>Refill Now</Text>
-        </Pressable>
-      </View>
+      <HelpBanner />
 
       {/* categories */}
       {categories.length > 0 && (
@@ -343,14 +331,14 @@ export default function HomeScreen() {
                 }
                 className={`px-4 h-9 rounded-full border ${
                   active
-                    ? 'bg-emerald-100 border-emerald-300'
+                    ? 'bg-primary-100 border-primary-300'
                     : 'bg-white border-neutral-200'
                 } justify-center`}
               >
                 <Text
                   className={
                     active
-                      ? 'text-emerald-700 font-semibold'
+                      ? 'text-primary-700 font-semibold'
                       : 'text-neutral-700'
                   }
                 >
@@ -428,7 +416,7 @@ export default function HomeScreen() {
         <View className='absolute left-0 right-0 bottom-2 px-4'>
           <Pressable
             onPress={() => router.push('/(tabs)/cart')}
-            className='h-12 rounded-full bg-emerald-700 items-center justify-center'
+            className='h-12 rounded-full bg-primary-700 active:bg-primary-800 items-center justify-center'
           >
             <Text className='text-white font-bold'>
               {cartItems} {cartItems === 1 ? 'item' : 'items'} •{' '}

@@ -74,7 +74,7 @@ export function SavedAddressesList({
               Save this exact text as your address
             </Text>
           </View>
-          <View className='px-3 py-2 rounded-lg bg-emerald-600'>
+          <View className='px-3 py-2 rounded-lg bg-primary-600 active:bg-primary-700'>
             <Text className='text-white text-xs font-bold'>ADD</Text>
           </View>
         </Pressable>
@@ -83,33 +83,47 @@ export function SavedAddressesList({
       {/* Saved list */}
       {filtered.map((item) => {
         const isHighlighted = item.id === highlightId;
+
+        // Dark brand row for default, light/neutal row for others
+        const rowClasses = [
+          'flex-row items-center rounded-2xl px-4 py-4 mb-2 border',
+          item.isDefault
+            ? 'bg-primary-600 border-primary-700'
+            : 'bg-white border-neutral-200',
+          isHighlighted ? 'border-primary-600' : '',
+        ].join(' ');
+
+        const titleTextClass = item.isDefault
+          ? 'text-white'
+          : 'text-neutral-900';
+        const metaTextClass = item.isDefault
+          ? 'text-primary-100'
+          : 'text-neutral-700';
+        const badgeTextClass = item.isDefault
+          ? 'text-primary-100'
+          : 'text-primary-700';
+
         return (
-          <View
-            key={item.id}
-            className={[
-              'flex-row items-center rounded-2xl px-4 py-4 mb-2 border',
-              item.isDefault
-                ? 'bg-emerald-50 border-emerald-200'
-                : 'bg-white border-neutral-200',
-              isHighlighted ? 'border-emerald-500' : '',
-            ].join(' ')}
-          >
+          <View key={item.id} className={rowClasses}>
             {/* Icon bubble (saved addresses show a home icon) */}
-            <View className='w-10 h-10 rounded-full bg-emerald-100 items-center justify-center mr-3'>
-              <Ionicons name='home-outline' size={20} color='#059669' />
+            <View className='w-10 h-10 rounded-full bg-white items-center justify-center mr-3'>
+              <Ionicons name='home-outline' size={20} color='#020084' />
             </View>
 
             <Pressable onPress={() => onChoose(item.id)} className='flex-1'>
-              <Text className='text-neutral-900 font-semibold text-base'>
+              <Text className={`${titleTextClass} font-semibold text-base`}>
                 {item.label}
                 {item.isDefault && (
-                  <Text className='text-emerald-600'> • Default</Text>
+                  <Text className={badgeTextClass}> • Default</Text>
                 )}
                 {isHighlighted && (
-                  <Text className='text-emerald-600'> • Added</Text>
+                  <Text className={badgeTextClass}> • Added</Text>
                 )}
               </Text>
-              <Text className='text-neutral-600 text-sm mt-1' numberOfLines={2}>
+              <Text
+                className={`${metaTextClass} text-sm mt-1`}
+                numberOfLines={2}
+              >
                 {item.details ??
                   `${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`}
               </Text>
@@ -119,9 +133,9 @@ export function SavedAddressesList({
               {!item.isDefault && (
                 <Pressable
                   onPress={() => setDefault(item.id)}
-                  className='px-3 py-2 rounded-lg bg-emerald-100 active:bg-emerald-200'
+                  className='px-3 py-2 rounded-lg bg-primary-100 active:bg-primary-200'
                 >
-                  <Text className='text-emerald-800 text-xs font-bold'>
+                  <Text className='text-primary-800 text-xs font-bold'>
                     DEFAULT
                   </Text>
                 </Pressable>

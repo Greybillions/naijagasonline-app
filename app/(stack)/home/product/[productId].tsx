@@ -32,11 +32,9 @@ type Product = {
   city?: string;
   seller_name?: string;
 
-  // (Optional) extra fields if you have them
   refill_price?: number | null;
   new_cylinder_price?: number | null;
 
-  // (Optional) add-ons column – array/JSON of product IDs
   addons?: string[] | { id: string }[] | null;
 };
 
@@ -45,7 +43,6 @@ const NGN = (n: number) => `₦${(n ?? 0).toLocaleString('en-NG')}`;
 export default function ProductScreen() {
   const params = useLocalSearchParams();
 
-  // accept both /product/[id] and /product/[productId]
   const productId: string | undefined = useMemo(() => {
     const raw =
       (Array.isArray(params.id) ? params.id[0] : (params.id as string)) ??
@@ -67,7 +64,6 @@ export default function ProductScreen() {
     let mounted = true;
 
     (async () => {
-      // If no id, stop loading and inform the user
       if (!productId) {
         if (mounted) {
           setLoading(false);
@@ -81,12 +77,12 @@ export default function ProductScreen() {
       try {
         setLoading(true);
 
-        // 1) Fetch main product
+        // 1) Main product
         const { data, error } = await supabase
           .from('products')
           .select('*')
           .eq('id', productId)
-          .maybeSingle(); // more forgiving than .single()
+          .maybeSingle();
 
         if (!mounted) return;
 
@@ -105,7 +101,7 @@ export default function ProductScreen() {
 
         setProduct(data);
 
-        // 2) Fetch add-ons (best effort)
+        // 2) Add-ons (best-effort)
         try {
           const ids = normalizeAddonIds(data.addons);
           if (ids.length) {
@@ -163,7 +159,6 @@ export default function ProductScreen() {
   async function handleAddToCart(p: Product) {
     try {
       setAdding(true);
-      // Your cart store `add` should accept a Product (as used elsewhere in your app)
       addToCart({
         id: p.id,
         title: p.title,
@@ -181,7 +176,7 @@ export default function ProductScreen() {
       <SafeAreaView className='flex-1 bg-neutral-50'>
         <AppHeader title='Product' onBack={() => router.back()} />
         <View className='flex-1 items-center justify-center'>
-          <ActivityIndicator size='large' color='#059669' />
+          <ActivityIndicator size='large' color='#020084' />
           <Text className='text-neutral-600 mt-3'>Loading product...</Text>
         </View>
       </SafeAreaView>
@@ -233,8 +228,8 @@ export default function ProductScreen() {
 
         {/* title + vendor + prices card */}
         <View className='mx-4 -mt-5 bg-white rounded-3xl p-4 border border-neutral-100 shadow-sm'>
-          <View className='self-start px-2 py-1 rounded-full bg-emerald-50 border border-emerald-100 mb-2'>
-            <Text className='text-emerald-700 text-[12px]'>
+          <View className='self-start px-2 py-1 rounded-full bg-primary-50 border border-primary-100 mb-2'>
+            <Text className='text-primary-700 text-[12px]'>
               Vendor: {vendor}
             </Text>
           </View>
@@ -243,7 +238,7 @@ export default function ProductScreen() {
             {product.title}
           </Text>
 
-          {/* two prices (if available) */}
+          {/* two prices */}
           {hasDualPrices ? (
             <View className='flex-row justify-between mt-3'>
               <View>
@@ -302,13 +297,13 @@ export default function ProductScreen() {
           <LoadingButton
             onPress={() => handleAddToCart(product)}
             loading={adding}
-            className='h-12 rounded-2xl'
+            className='h-12 rounded-2xl bg-primary-700 active:bg-primary-800'
           >
             Add to Cart
           </LoadingButton>
         </View>
 
-        {/* specs (minimal placeholders) */}
+        {/* specs */}
         <View className='mx-4 mt-4 bg-white rounded-2xl border border-neutral-100'>
           <Text className='px-4 pt-4 pb-2 text-neutral-900 font-extrabold'>
             Specifications
@@ -369,7 +364,7 @@ export default function ProductScreen() {
                       </Text>
                       <Pressable
                         onPress={() => handleAddToCart(a)}
-                        className='mt-2 h-9 rounded-full bg-emerald-600 items-center justify-center'
+                        className='mt-2 h-9 rounded-full bg-primary-700 active:bg-primary-800 items-center justify-center'
                       >
                         <Text className='text-white font-semibold'>Add</Text>
                       </Pressable>
@@ -381,10 +376,10 @@ export default function ProductScreen() {
           </View>
         )}
 
-        {/* delivery estimate (simple) */}
+        {/* delivery estimate */}
         <View className='mx-4 mt-4 mb-6 bg-white rounded-2xl p-3 border border-neutral-100 flex-row items-center gap-3'>
-          <View className='w-9 h-9 rounded-full bg-emerald-100 items-center justify-center'>
-            <Ionicons name='bicycle-outline' size={18} color='#059669' />
+          <View className='w-9 h-9 rounded-full bg-primary-50 items-center justify-center'>
+            <Ionicons name='bicycle-outline' size={18} color='#020084' />
           </View>
           <View>
             <Text className='text-neutral-900 font-semibold'>
@@ -403,7 +398,6 @@ export default function ProductScreen() {
 function normalizeAddonIds(input: Product['addons']): string[] {
   if (!input) return [];
   if (Array.isArray(input)) {
-    // Could be ['id1','id2'] OR [{id:'..'}]
     const ids: string[] = [];
     for (const x of input) {
       if (typeof x === 'string') ids.push(x);
@@ -434,13 +428,13 @@ function OptionChip({
       onPress={onPress}
       className={`flex-1 rounded-2xl px-3 py-3 border ${
         active
-          ? 'border-emerald-400 bg-emerald-50'
+          ? 'border-primary-300 bg-primary-50'
           : 'border-neutral-200 bg-white'
       }`}
     >
       <Text
         className={
-          active ? 'text-emerald-700 font-semibold' : 'text-neutral-800'
+          active ? 'text-primary-700 font-semibold' : 'text-neutral-800'
         }
       >
         {label}

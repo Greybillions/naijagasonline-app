@@ -127,13 +127,13 @@ export default function CartScreen() {
                     </View>
                     <Pressable
                       onPress={applyCoupon}
-                      className='h-12 px-5 rounded-xl bg-emerald-700 items-center justify-center'
+                      className='h-12 px-5 rounded-xl bg-primary-700 active:bg-primary-800 items-center justify-center'
                     >
                       <Text className='text-white font-semibold'>Apply</Text>
                     </Pressable>
                   </View>
                   {coupon !== null && (
-                    <Text className='text-emerald-700 text-xs mt-2'>
+                    <Text className='text-primary-700 text-xs mt-2'>
                       Applied: {coupon || '—'}
                     </Text>
                   )}
@@ -164,7 +164,7 @@ export default function CartScreen() {
           <View className='absolute left-0 right-0 bottom-0 px-4 pb-5 pt-3 bg-neutral-50'>
             <Pressable
               onPress={checkout}
-              className='h-12 rounded-xl bg-emerald-700 items-center justify-center'
+              className='h-12 rounded-xl bg-primary-700 active:bg-primary-800 items-center justify-center'
             >
               <Text className='text-white font-extrabold'>Checkout</Text>
             </Pressable>

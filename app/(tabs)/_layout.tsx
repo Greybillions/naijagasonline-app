@@ -40,7 +40,7 @@ function TabBar({ state, descriptors, navigation }: any) {
           const Icon = options.tabBarIcon
             ? options.tabBarIcon({
                 focused: isFocused,
-                color: isFocused ? '#065F46' : '#6B7280',
+                color: isFocused ? '#020084' : '#6B7280', // primary when focused
                 size: 22,
               })
             : null;
@@ -58,7 +58,7 @@ function TabBar({ state, descriptors, navigation }: any) {
                 <Text
                   className={`mt-1 text-xs ${
                     isFocused
-                      ? 'text-emerald-700 font-semibold'
+                      ? 'text-primary-700 font-semibold'
                       : 'text-neutral-500'
                   }`}
                 >
@@ -76,7 +76,7 @@ function TabBar({ state, descriptors, navigation }: any) {
 
 export default function TabsLayout() {
   const iconFor = (name: string, focused: boolean) => {
-    const color = focused ? '#065F46' : '#6B7280';
+    const color = focused ? '#020084' : '#6B7280'; // brand primary vs neutral
     switch (name) {
       case 'home':
         return (

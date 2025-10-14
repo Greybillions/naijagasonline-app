@@ -1,4 +1,3 @@
-// app/(tabs)/cart/checkout.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -7,6 +6,8 @@ import {
   ScrollView,
   Alert,
   TextInput,
+  Modal,
+  Pressable as RNPressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,42 +17,47 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppHeader } from '@/components/common/AppHeader';
 import { useCartStore } from '@/stores/cart.store';
 import { useAddressesStore } from '@/stores/addresses.store';
+import { addOrder, LocalOrder } from '@/lib/orders';
+import { supabase } from '@/lib/supabase';
 
-const NGN = (n: number) => `₦${n.toLocaleString('en-NG')}`;
-type PayMethod = 'card' | 'bank';
+const NGN = (n: number) => `₦${Number(n || 0).toLocaleString('en-NG')}`;
+type PayMethod = 'cod' | 'card' | 'bank';
 
-// Local storage keys
 const LS_NAME_KEY = 'checkout_full_name';
 const LS_PHONE_KEY = 'checkout_phone';
 
+// small guards
+const safeStr = (v: any) => (v == null ? '' : String(v));
+const digitsOnly = (v: string) => v.replace(/\D+/g, '');
+
 export default function CheckoutScreen() {
-  // ---- Cart totals (adapt to your store shape if needed)
   const lines = useCartStore((s: any) => s.lines ?? s.items ?? []);
-  const subtotal = useMemo(
-    () =>
-      Array.isArray(lines)
-        ? lines.reduce(
-            (acc: number, l: any) => acc + (l.price ?? 0) * (l.qty ?? 0),
-            0
-          )
-        : 0,
-    [lines]
-  );
-  const deliveryFee = lines?.length ? 500 : 0;
+  // ✅ select the function, don't call it in the selector
+  const clearCart = useCartStore((s: any) => s.clear);
+
+  const subtotal = useMemo(() => {
+    if (!Array.isArray(lines)) return 0;
+    return lines.reduce(
+      (acc: number, l: any) =>
+        acc + (Number(l?.price) || 0) * (Number(l?.qty) || 0),
+      0
+    );
+  }, [lines]);
+
+  const deliveryFee = Array.isArray(lines) && lines.length ? 500 : 0;
   const total = subtotal + deliveryFee;
 
-  // ---- Address: use default from store
   const defaultAddress = useAddressesStore((s) => s.getDefault?.());
   const hasAddress = !!defaultAddress;
 
-  // ---- UI state
-  const [method, setMethod] = useState<PayMethod>('card');
-
-  // ---- Customer details (persisted)
+  const [method, setMethod] = useState<PayMethod>('cod'); // recommended
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
 
-  // Load saved name/phone once
+  // modals
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
@@ -61,23 +67,33 @@ export default function CheckoutScreen() {
         ]);
         if (savedName) setFullName(savedName);
         if (savedPhone) setPhone(savedPhone);
-      } catch {
-        // ignore read errors
-      }
+      } catch {}
     })();
   }, []);
-
-  // Persist on change (simple; move to onBlur if you prefer fewer writes)
   useEffect(() => {
     AsyncStorage.setItem(LS_NAME_KEY, fullName).catch(() => {});
   }, [fullName]);
-
   useEffect(() => {
     AsyncStorage.setItem(LS_PHONE_KEY, phone).catch(() => {});
   }, [phone]);
 
+  // safe address (no toFixed in render without guards)
+  const deliveryAddressText = useMemo(() => {
+    const details = safeStr(defaultAddress?.details).trim();
+    const lat =
+      typeof defaultAddress?.lat === 'number' && isFinite(defaultAddress.lat)
+        ? defaultAddress.lat.toFixed(5)
+        : '';
+    const lng =
+      typeof defaultAddress?.lng === 'number' && isFinite(defaultAddress.lng)
+        ? defaultAddress.lng.toFixed(5)
+        : '';
+    const coords = lat && lng ? `${lat}, ${lng}` : '';
+    return details || coords || '';
+  }, [defaultAddress]);
+
   function onPlaceOrder() {
-    // Basic validation
+    // simple validation (errors can still use Alert for clarity)
     if (!fullName.trim()) {
       Alert.alert('Name required', 'Please enter your full name.');
       return;
@@ -87,35 +103,84 @@ export default function CheckoutScreen() {
       return;
     }
     if (!hasAddress) {
-      Alert.alert(
-        'No delivery address',
-        'Please select a delivery address before placing your order.'
-      );
+      Alert.alert('No delivery address', 'Please select a delivery address.');
       return;
     }
-
-    if (method === 'card') {
+    if (method !== 'cod') {
       Alert.alert(
         'Coming soon',
-        'Card payments are coming soon. Please choose Bank Transfer for now.'
+        'Card and Bank Transfer are coming soon. Use Payment on Delivery for now.'
       );
       return;
     }
 
-    // Bank transfer selected: pass along contact + address data
-    router.push({
-      pathname: '/cart/bank-transfer-proof',
-      params: {
-        name: fullName,
-        phone,
-        addressLabel: defaultAddress?.label ?? '',
-        addressDetails:
-          defaultAddress?.details ??
-          `${defaultAddress?.lat?.toFixed?.(5) ?? ''}, ${defaultAddress?.lng?.toFixed?.(5) ?? ''}`,
-        lat: String(defaultAddress?.lat ?? ''),
-        lng: String(defaultAddress?.lng ?? ''),
-      },
-    });
+    setShowConfirm(true);
+  }
+
+  async function confirmPlaceOrder() {
+    setShowConfirm(false);
+
+    const txRef = `NGO-${Date.now()}-${Math.floor(Math.random() * 1e5)}`;
+    const nowIso = new Date().toISOString();
+
+    const order: LocalOrder = {
+      id: txRef,
+      created_at: nowIso,
+      name: safeStr(fullName).trim(),
+      phonenumber: digitsOnly(safeStr(phone)),
+      address: [safeStr(defaultAddress?.label), deliveryAddressText]
+        .filter(Boolean)
+        .join(' — '),
+      product: (Array.isArray(lines) ? lines : []).map((l: any) => ({
+        id: safeStr(l?.id),
+        title: safeStr(l?.title),
+        price: Number(l?.price) || 0,
+        qty: Number(l?.qty) || 0,
+        image: l?.image ? safeStr(l.image) : undefined,
+      })),
+      tx_ref: txRef,
+      delivery_method: 'door_delivery',
+      payment_mode: 'cod',
+      status: 'placed',
+      total: Number(total) || 0,
+      sync: 'queued',
+    };
+
+    // local save
+    try {
+      await addOrder(order);
+    } catch (e) {
+      Alert.alert('Storage error', 'Could not save the order locally.');
+      return;
+    }
+
+    // best-effort remote
+    try {
+      await supabase.from('cart_order').insert({
+        name: order.name,
+        phonenumber: order.phonenumber,
+        address: order.address,
+        product: order.product,
+        tx_ref: order.tx_ref,
+        delivery_method: order.delivery_method,
+        payment_mode: order.payment_mode,
+        status: order.status,
+      });
+    } catch (e) {
+      console.warn('Order sync failed', e);
+    }
+
+    // clear cart
+    try {
+      clearCart?.();
+    } catch {}
+
+    setShowSuccess(true);
+  }
+
+  function closeSuccessAndGoToOrders() {
+    setShowSuccess(false);
+    router.replace('/(tabs)/orders');
   }
 
   return (
@@ -127,13 +192,12 @@ export default function CheckoutScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Contact Details (persisted) */}
+        {/* Contact Details */}
         <View className='bg-white rounded-2xl px-4 py-4 mb-3 border border-neutral-100'>
           <Text className='text-neutral-900 font-extrabold mb-3'>
             Contact Details
           </Text>
 
-          {/* Name */}
           <View className='mb-3'>
             <Text className='text-neutral-700 mb-1'>Full Name</Text>
             <View className='h-12 rounded-xl border border-neutral-200 bg-white px-3 justify-center'>
@@ -149,7 +213,6 @@ export default function CheckoutScreen() {
             </View>
           </View>
 
-          {/* Phone */}
           <View>
             <Text className='text-neutral-700 mb-1'>Phone Number</Text>
             <View className='h-12 rounded-xl border border-neutral-200 bg-white px-3 justify-center'>
@@ -168,7 +231,7 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        {/* Delivery Address (from store) */}
+        {/* Delivery Address */}
         <View className='bg-white rounded-2xl px-4 py-4 mb-3 border border-neutral-100'>
           <Text className='text-neutral-900 font-extrabold mb-2'>
             Delivery Address
@@ -178,11 +241,10 @@ export default function CheckoutScreen() {
               {hasAddress ? (
                 <>
                   <Text className='text-neutral-900 font-semibold'>
-                    {defaultAddress?.label}
+                    {safeStr(defaultAddress?.label)}
                   </Text>
                   <Text className='text-neutral-700 mt-0.5'>
-                    {defaultAddress?.details ??
-                      `${defaultAddress?.lat?.toFixed?.(5) ?? ''}, ${defaultAddress?.lng?.toFixed?.(5) ?? ''}`}
+                    {deliveryAddressText || '—'}
                   </Text>
                 </>
               ) : (
@@ -191,27 +253,14 @@ export default function CheckoutScreen() {
                 </Text>
               )}
               <Pressable onPress={() => router.push('/address')}>
-                <Text className='text-emerald-700 mt-1 font-semibold'>
+                <Text className='text-primary-700 mt-1 font-semibold'>
                   {hasAddress ? 'Change' : 'Choose Address'}
                 </Text>
               </Pressable>
             </View>
-            <View className='w-14 h-14 rounded-xl bg-emerald-50 items-center justify-center'>
-              <Ionicons name='location-sharp' size={20} color='#059669' />
+            <View className='w-14 h-14 rounded-xl bg-primary-50 items-center justify-center'>
+              <Ionicons name='location-sharp' size={20} color='#020084' />
             </View>
-          </View>
-        </View>
-
-        {/* Delivery Window (placeholder for now) */}
-        <View className='bg-white rounded-2xl px-4 py-4 mb-3 border border-neutral-100'>
-          <Text className='text-neutral-900 font-extrabold mb-2'>
-            Delivery Window
-          </Text>
-          <View className='flex-row items-center justify-between'>
-            <Text className='text-neutral-800'>Today, 10:00 AM – 12:00 PM</Text>
-            <Pressable onPress={() => router.push('/address')}>
-              <Text className='text-emerald-700 font-semibold'>Change</Text>
-            </Pressable>
           </View>
         </View>
 
@@ -221,43 +270,51 @@ export default function CheckoutScreen() {
             Payment Method
           </Text>
 
-          {/* Card */}
           <Pressable
-            onPress={() => setMethod('card')}
-            className='flex-row items-center justify-between h-12 px-3 rounded-xl border border-neutral-200 mb-2'
+            onPress={() => setMethod('cod')}
+            className={`flex-row items-center justify-between h-12 px-3 rounded-xl border mb-2 ${
+              method === 'cod'
+                ? 'border-primary-300 bg-primary-50'
+                : 'border-neutral-200'
+            }`}
+          >
+            <View className='flex-row items-center'>
+              <Ionicons name='bag-check-outline' size={18} color='#020084' />
+              <Text className='ml-3 text-neutral-900'>
+                Payment on Delivery
+                <Text className='text-primary-700'> (Recommended)</Text>
+              </Text>
+            </View>
+            <Ionicons
+              name={method === 'cod' ? 'radio-button-on' : 'radio-button-off'}
+              size={20}
+              color={method === 'cod' ? '#020084' : '#9CA3AF'}
+            />
+          </Pressable>
+
+          <Pressable
+            onPress={() => {}}
+            className='flex-row items-center justify-between h-12 px-3 rounded-xl border border-neutral-200 mb-2 opacity-70'
           >
             <View className='flex-row items-center'>
               <Ionicons name='card-outline' size={18} color='#111' />
-              <Text className='ml-3 text-neutral-900'>Card</Text>
+              <Text className='ml-3 text-neutral-900'>Card — Coming soon</Text>
             </View>
-            <Ionicons
-              name={method === 'card' ? 'radio-button-on' : 'radio-button-off'}
-              size={20}
-              color={method === 'card' ? '#059669' : '#9CA3AF'}
-            />
+            <Ionicons name='radio-button-off' size={20} color='#9CA3AF' />
           </Pressable>
 
-          {/* Bank Transfer */}
           <Pressable
-            onPress={() => setMethod('bank')}
-            className='flex-row items-center justify-between h-12 px-3 rounded-xl border border-neutral-200'
+            onPress={() => {}}
+            className='flex-row items-center justify-between h-12 px-3 rounded-xl border border-neutral-200 opacity-70'
           >
             <View className='flex-row items-center'>
               <Ionicons name='cash-outline' size={18} color='#111' />
-              <Text className='ml-3 text-neutral-900'>Bank Transfer</Text>
+              <Text className='ml-3 text-neutral-900'>
+                Bank Transfer — Coming soon
+              </Text>
             </View>
-            <Ionicons
-              name={method === 'bank' ? 'radio-button-on' : 'radio-button-off'}
-              size={20}
-              color={method === 'bank' ? '#059669' : '#9CA3AF'}
-            />
+            <Ionicons name='radio-button-off' size={20} color='#9CA3AF' />
           </Pressable>
-
-          {method === 'card' && (
-            <Text className='text-amber-700 text-xs mt-2'>
-              Card payments are coming soon.
-            </Text>
-          )}
         </View>
       </ScrollView>
 
@@ -269,19 +326,140 @@ export default function CheckoutScreen() {
         </View>
         <Pressable
           onPress={onPlaceOrder}
-          className={`h-12 rounded-xl items-center justify-center ${
-            method === 'card' ? 'bg-neutral-300' : 'bg-emerald-700'
-          }`}
+          className='h-12 rounded-xl items-center justify-center bg-primary-700 active:bg-primary-800'
         >
-          <Text
-            className={`font-extrabold ${
-              method === 'card' ? 'text-neutral-700' : 'text-white'
-            }`}
-          >
-            Place Order
-          </Text>
+          <Text className='text-white font-extrabold'>Place Order</Text>
         </Pressable>
       </View>
+
+      {/* Confirm Modal (slide from bottom) */}
+      <Modal
+        visible={showConfirm}
+        transparent
+        animationType='slide'
+        onRequestClose={() => setShowConfirm(false)}
+      >
+        <RNPressable
+          className='flex-1 bg-black/40'
+          onPress={() => setShowConfirm(false)}
+        >
+          {/* catch taps inside sheet */}
+          <RNPressable className='mt-auto'>
+            <View className='w-full bg-white rounded-t-3xl p-5'>
+              <View className='items-center mb-3'>
+                <Ionicons name='alert-circle' size={28} color='#020084' />
+              </View>
+              <Text className='text-center text-lg font-extrabold text-neutral-900'>
+                Confirm order
+              </Text>
+
+              <View className='mt-4 rounded-2xl border border-primary-100 bg-primary-50 p-4'>
+                <Row label='Name' value={fullName || '—'} emphasize />
+                <Row label='Phone' value={phone || '—'} />
+                <Row
+                  label='Address'
+                  value={
+                    hasAddress
+                      ? `${safeStr(defaultAddress?.label)}${deliveryAddressText ? ` — ${deliveryAddressText}` : ''}`
+                      : '—'
+                  }
+                />
+                <Row
+                  label='Payment'
+                  value='Payment on Delivery (Recommended)'
+                />
+                <View className='h-px bg-neutral-200 my-3' />
+                <Row label='Total' value={NGN(total)} bold />
+              </View>
+
+              <View className='mt-4 flex-row gap-3'>
+                <Pressable
+                  onPress={() => setShowConfirm(false)}
+                  className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+                >
+                  <Text className='text-neutral-800 font-semibold'>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={confirmPlaceOrder}
+                  className='flex-1 h-12 rounded-xl bg-primary-700 active:bg-primary-800 items-center justify-center'
+                >
+                  <Text className='text-white font-extrabold'>Confirm</Text>
+                </Pressable>
+              </View>
+            </View>
+          </RNPressable>
+        </RNPressable>
+      </Modal>
+
+      {/* Success Modal (slide from bottom) */}
+      <Modal
+        visible={showSuccess}
+        transparent
+        animationType='slide'
+        onRequestClose={() => setShowSuccess(false)}
+      >
+        <RNPressable
+          className='flex-1 bg-black/40'
+          onPress={closeSuccessAndGoToOrders}
+        >
+          <RNPressable className='mt-auto'>
+            <View className='w-full bg-white rounded-t-3xl p-6 items-center'>
+              <View className='w-16 h-16 rounded-full bg-primary-50 items-center justify-center mb-3'>
+                <Ionicons name='checkmark' size={36} color='#020084' />
+              </View>
+              <Text className='text-xl font-extrabold text-neutral-900'>
+                Order placed!
+              </Text>
+              <Text className='text-neutral-600 text-center mt-2'>
+                Thanks {fullName || 'there'} — we’ll deliver to{' '}
+                {safeStr(defaultAddress?.label) || 'your address'} shortly.
+              </Text>
+              <View className='mt-5 w-full flex-row gap-3'>
+                <Pressable
+                  onPress={() => setShowSuccess(false)}
+                  className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+                >
+                  <Text className='text-neutral-800 font-semibold'>Done</Text>
+                </Pressable>
+                <Pressable
+                  onPress={closeSuccessAndGoToOrders}
+                  className='flex-1 h-12 rounded-xl bg-primary-700 active:bg-primary-800 items-center justify-center'
+                >
+                  <Text className='text-white font-extrabold'>View Orders</Text>
+                </Pressable>
+              </View>
+            </View>
+          </RNPressable>
+        </RNPressable>
+      </Modal>
     </SafeAreaView>
+  );
+}
+
+function Row({
+  label,
+  value,
+  muted,
+  bold,
+  emphasize,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+  bold?: boolean;
+  emphasize?: boolean;
+}) {
+  return (
+    <View className='flex-row items-start justify-between py-1.5'>
+      <Text className='text-neutral-600 mr-3'>{label}</Text>
+      <Text
+        className={`flex-1 text-right ${
+          bold ? 'font-extrabold text-neutral-900' : 'text-neutral-800'
+        } ${muted ? 'text-red-500' : ''} ${emphasize ? 'text-primary-800 font-semibold' : ''}`}
+        numberOfLines={3}
+      >
+        {value}
+      </Text>
+    </View>
   );
 }

@@ -10,7 +10,7 @@ export function CurrentLocationButton({ onPress, loading }: Props) {
   return (
     <Pressable
       onPress={onPress}
-      className='mb-3 h-12 rounded-2xl bg-blue-600 items-center justify-center flex-row  active:bg-blue-700'
+      className='mb-3 h-12 rounded-2xl bg-primary-600 active:bg-primary-700 items-center justify-center flex-row'
       disabled={loading}
     >
       {loading ? (

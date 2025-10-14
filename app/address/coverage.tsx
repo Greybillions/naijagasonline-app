@@ -128,8 +128,8 @@ export default function DeliveryCoverage() {
 
           {/* Address card */}
           <View className='bg-white rounded-2xl px-4 py-3 mb-3 border border-neutral-100 flex-row items-start gap-3'>
-            <View className='w-9 h-9 rounded-full bg-emerald-100 items-center justify-center mt-0.5'>
-              <Ionicons name='location-sharp' size={18} color='#0C6B4A' />
+            <View className='w-9 h-9 rounded-full bg-primary-100 items-center justify-center mt-0.5'>
+              <Ionicons name='location-sharp' size={18} color='#020084' />
             </View>
             <View className='flex-1'>
               <Text className='text-neutral-900 font-semibold'>
@@ -162,8 +162,8 @@ export default function DeliveryCoverage() {
           {/* Info row */}
           <View className='flex-row gap-3 mb-3'>
             <View className='flex-1 bg-white rounded-2xl px-4 py-3 border border-neutral-100 flex-row items-center gap-3'>
-              <View className='w-9 h-9 rounded-full bg-emerald-100 items-center justify-center'>
-                <Ionicons name='time-outline' size={18} color='#0C6B4A' />
+              <View className='w-9 h-9 rounded-full bg-primary-100 items-center justify-center'>
+                <Ionicons name='time-outline' size={18} color='#020084' />
               </View>
               <View>
                 <Text className='text-neutral-900 font-semibold'>ETA</Text>
@@ -172,8 +172,8 @@ export default function DeliveryCoverage() {
             </View>
 
             <View className='flex-1 bg-white rounded-2xl px-4 py-3 border border-neutral-100 flex-row items-center gap-3'>
-              <View className='w-9 h-9 rounded-full bg-emerald-100 items-center justify-center'>
-                <Ionicons name='cash-outline' size={18} color='#0C6B4A' />
+              <View className='w-9 h-9 rounded-full bg-primary-100 items-center justify-center'>
+                <Ionicons name='cash-outline' size={18} color='#020084' />
               </View>
               <View>
                 <Text className='text-neutral-900 font-semibold'>Fee</Text>
@@ -184,8 +184,8 @@ export default function DeliveryCoverage() {
 
           {/* Min order */}
           <View className='bg-white rounded-2xl px-4 py-3 mb-2 border border-neutral-100 flex-row items-center gap-3'>
-            <View className='w-9 h-9 rounded-full bg-emerald-100 items-center justify-center'>
-              <Ionicons name='cart-outline' size={18} color='#0C6B4A' />
+            <View className='w-9 h-9 rounded-full bg-primary-100 items-center justify-center'>
+              <Ionicons name='cart-outline' size={18} color='#020084' />
             </View>
             <View>
               <Text className='text-neutral-900 font-semibold'>
@@ -213,7 +213,7 @@ export default function DeliveryCoverage() {
           onPress={goToHomeWithAddress}
           disabled={!hasAddress}
           className={`h-12 rounded-xl items-center justify-center ${
-            hasAddress ? 'bg-emerald-600' : 'bg-neutral-300'
+            hasAddress ? 'bg-primary-600' : 'bg-neutral-300'
           }`}
         >
           <Text
