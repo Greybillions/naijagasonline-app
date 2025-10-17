@@ -252,7 +252,7 @@ export default function HomeScreen() {
   /* ----------------------------- header renderer ---------------------------- */
   const renderHeader = () => (
     <View className='px-4 mb-3 pt-4 space-y-3'>
-      {/* location + settings */}
+      {/* location + cart */}
       <View className='flex-row items-center justify-between mb-3'>
         <Pressable
           className='flex-row items-center bg-white rounded-full px-3 py-2 border border-primary-200'
@@ -269,12 +269,12 @@ export default function HomeScreen() {
         </Pressable>
 
         <Pressable
-          className='w-10 h-10 rounded-full bg-white items-center justify-center border border-neutral-200 relative'
+          className='w-12 h-12 rounded-full bg-white items-center justify-center border border-neutral-200 relative'
           onPress={() => router.push('/(tabs)/cart')}
           accessibilityRole='button'
           accessibilityLabel='Open cart'
         >
-          <Ionicons name='cart-outline' size={18} color='#111' />
+          <Ionicons name='cart-outline' size={28} color='#111' />
 
           {itemCount > 0 && (
             <View className='absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-600 items-center justify-center'>
@@ -416,7 +416,7 @@ export default function HomeScreen() {
         <View className='absolute left-0 right-0 bottom-2 px-4'>
           <Pressable
             onPress={() => router.push('/(tabs)/cart')}
-            className='h-12 rounded-full bg-primary-700 active:bg-primary-800 items-center justify-center'
+            className='h-12 rounded-full bg-[#7b0323] active:bg-[#5a0019] items-center justify-center'
           >
             <Text className='text-white font-bold'>
               {cartItems} {cartItems === 1 ? 'item' : 'items'} •{' '}

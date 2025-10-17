@@ -1,4 +1,4 @@
-// app/(stack)/buy-gas.tsx  (or wherever you keep this screen)
+// app/(stack)/buy-gas.tsx
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,10 +18,11 @@ import { router } from 'expo-router';
 import { AppHeader } from '@/components/common/AppHeader';
 import { supabase } from '@/lib/supabase';
 import { NigerianCities } from '@/constants/locationData';
-import { addOrder, LocalOrder } from '@/lib/orders'; // ✅ local save
+import { addOrder, LocalOrder } from '@/lib/orders';
 
 /* ------------------------------ constants ------------------------------ */
-type ListOption = string | { label: string; value: string };
+type LabeledOption = { label: string; value: string };
+type ListOption = string | LabeledOption;
 
 const KG_OPTIONS = [
   '3kg',
@@ -41,7 +43,7 @@ const PRICE_TABLE: Record<KG, number> = {
   '12.5kg': 12500,
   '25kg': 25000,
   '50kg': 50000,
-};
+} as const;
 
 const DELIVERY_OPTIONS = ['Door Delivery', 'Pickup'] as const;
 type Delivery = (typeof DELIVERY_OPTIONS)[number];
@@ -52,32 +54,38 @@ const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 /* -------------------------------- screen ------------------------------- */
 export default function BuyGasScreen() {
   // form
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [fullName, setFullName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
   const [kg, setKg] = useState<KG | ''>('');
   const [delivery, setDelivery] = useState<Delivery | ''>('Door Delivery');
   const [stateVal, setStateVal] = useState<string>('');
   const [city, setCity] = useState<string>('');
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState<string>('');
 
   // sheets / modals
   const [sheetFor, setSheetFor] = useState<
     null | 'kg' | 'delivery' | 'state' | 'city'
   >(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [successOpen, setSuccessOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+  const [successOpen, setSuccessOpen] = useState<boolean>(false);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const states = useMemo(() => Object.keys(NigerianCities), []);
-  const citiesForState = useMemo(
-    () => (stateVal ? (NigerianCities[stateVal] ?? []) : []),
+  // Sorted states for nicer UX
+  const states = useMemo<readonly string[]>(
+    () => Object.keys(NigerianCities).sort(),
+    []
+  );
+
+  // Sorted cities for current state
+  const citiesForState = useMemo<readonly string[]>(
+    () => (stateVal ? (NigerianCities[stateVal] ?? []).slice().sort() : []),
     [stateVal]
   );
 
-  const price = useMemo(() => (kg ? PRICE_TABLE[kg] : 0), [kg]);
+  const price = useMemo<number>(() => (kg ? PRICE_TABLE[kg] : 0), [kg]);
 
-  const canSubmit =
+  const canSubmit: boolean =
     !!fullName.trim() &&
     !!phone.trim() &&
     !!kg &&
@@ -109,10 +117,9 @@ export default function BuyGasScreen() {
       product: [
         {
           id: `kg-${kg || 'na'}`,
-          title: 'Quick Refill', // ✅ the title you asked for
+          title: 'Quick Refill',
           price,
           qty: 1,
-          image: undefined,
         },
       ],
       tx_ref: txRef,
@@ -128,24 +135,20 @@ export default function BuyGasScreen() {
       // 1) Save locally (source of truth for Orders page)
       await addOrder(localOrder);
 
-      // 2) Fire-and-forget remote insert to Supabase (does not block UX)
-      try {
-        await supabase.from('orders').insert([
-          {
-            full_name: localOrder.name,
-            phone: localOrder.phonenumber,
-            kg,
-            price,
-            status: 'pending',
-            delivery_option: delivery,
-            address: address.trim(),
-            state: stateVal,
-            city,
-          },
-        ]);
-      } catch (e) {
-        console.warn('Remote insert failed (orders):', e);
-      }
+      // 2) Fire-and-forget remote insert to Supabase
+      await supabase.from('orders').insert([
+        {
+          full_name: localOrder.name,
+          phone: localOrder.phonenumber,
+          kg,
+          price,
+          status: 'pending',
+          delivery_option: delivery,
+          address: address.trim(),
+          state: stateVal,
+          city,
+        },
+      ]);
 
       // reset and show success
       setFullName('');
@@ -156,8 +159,9 @@ export default function BuyGasScreen() {
       setCity('');
       setAddress('');
       setSuccessOpen(true);
-    } catch (e: any) {
-      alert(e?.message || 'Unable to place order.');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Unable to place order.';
+      alert(msg);
     } finally {
       setLoading(false);
     }
@@ -175,9 +179,10 @@ export default function BuyGasScreen() {
           className='flex-1'
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 30 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'
         >
           {/* Banner */}
-          <View className='mt-4 bg-primary-700 rounded-3xl px-5 py-5'>
+          <View className='mt-4 bg-[#7b0323] rounded-3xl px-5 py-5'>
             <Text className='text-white text-lg font-extrabold'>
               Quick Gas Refill
             </Text>
@@ -216,15 +221,15 @@ export default function BuyGasScreen() {
             {/* KG */}
             <Select
               label='Cylinder Size (KG)'
-              value={kg}
-              display={kg || 'Select KG'}
+              value={kg ?? ''}
+              display={kg ? `${kg} — ${NGN(PRICE_TABLE[kg])}` : 'Select KG'}
               onPress={() => setSheetFor('kg')}
             />
 
             {/* Delivery */}
             <Select
               label='Delivery Option'
-              value={delivery}
+              value={delivery ?? ''}
               display={delivery || 'Select Delivery'}
               onPress={() => setSheetFor('delivery')}
             />
@@ -275,7 +280,7 @@ export default function BuyGasScreen() {
               className={`h-12 rounded-2xl mt-3 items-center justify-center ${
                 !canSubmit || loading
                   ? 'bg-primary-300'
-                  : 'bg-primary-700 active:bg-primary-800'
+                  : 'bg-[#7b0323] active:bg-[#5a0019]'
               }`}
             >
               <Text className='text-white font-extrabold'>
@@ -290,10 +295,16 @@ export default function BuyGasScreen() {
       <ListSheet
         open={sheetFor === 'kg'}
         title='Select KG'
-        options={KG_OPTIONS}
+        options={
+          KG_OPTIONS.map<ListOption>((k) => ({
+            label: `${k} — ${NGN(PRICE_TABLE[k])}`,
+            value: k,
+          })) as readonly ListOption[]
+        }
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          setKg(v as KG);
+          const chosen = typeof v === 'string' ? v : v.value;
+          setKg(chosen as KG);
           setSheetFor(null);
         }}
       />
@@ -301,10 +312,11 @@ export default function BuyGasScreen() {
       <ListSheet
         open={sheetFor === 'delivery'}
         title='Select Delivery Option'
-        options={DELIVERY_OPTIONS as unknown as string[]}
+        options={DELIVERY_OPTIONS as readonly ListOption[]}
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          setDelivery(v as Delivery);
+          const chosen = (typeof v === 'string' ? v : v.value) as Delivery;
+          setDelivery(chosen);
           setSheetFor(null);
         }}
       />
@@ -312,10 +324,16 @@ export default function BuyGasScreen() {
       <ListSheet
         open={sheetFor === 'state'}
         title='Select State'
-        options={states.map((s) => ({ label: cap(s), value: s })) as any}
+        options={
+          states.map<ListOption>((s) => ({
+            label: cap(s),
+            value: s,
+          })) as readonly ListOption[]
+        }
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          setStateVal(String((v as any).value ?? v));
+          const chosen = (typeof v === 'string' ? v : v.value) as string;
+          setStateVal(chosen);
           setCity('');
           setSheetFor(null);
         }}
@@ -324,100 +342,117 @@ export default function BuyGasScreen() {
       <ListSheet
         open={sheetFor === 'city'}
         title={`Select City${stateVal ? ` (${cap(stateVal)})` : ''}`}
-        options={citiesForState}
+        options={citiesForState as readonly ListOption[]}
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          setCity(String(v));
+          const chosen = (typeof v === 'string' ? v : v.value) as string;
+          setCity(chosen);
           setSheetFor(null);
         }}
       />
 
-      {/* Confirm Modal */}
+      {/* Confirm Modal (bottom anchored + scroll-safe) */}
       <Modal
         visible={confirmOpen}
         transparent
         animationType='slide'
         onRequestClose={() => setConfirmOpen(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setConfirmOpen(false)}>
-          <View className='flex-1 bg-black/40' />
-        </TouchableWithoutFeedback>
+        <View className='flex-1 justify-end'>
+          <TouchableWithoutFeedback onPress={() => setConfirmOpen(false)}>
+            <View className='absolute inset-0 bg-black/40' />
+          </TouchableWithoutFeedback>
 
-        <View className='bg-white rounded-t-3xl px-6 pt-6 pb-5'>
-          <View className='items-center mb-3'>
-            <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
-          </View>
-          <Text className='text-lg font-extrabold text-neutral-900 text-center'>
-            Confirm Order
-          </Text>
+          <View className='bg-white rounded-t-3xl px-6 pt-6 pb-5 max-h-[70%]'>
+            <View className='items-center mb-3'>
+              <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
+            </View>
+            <Text className='text-lg font-extrabold text-neutral-900 text-center'>
+              Confirm Order
+            </Text>
 
-          <View className='mt-4 rounded-2xl border border-primary-100 bg-primary-50 p-4'>
-            <Row label='Name' value={fullName} />
-            <Row label='Phone' value={phone} />
-            <Row label='KG' value={(kg as string) || '—'} />
-            <Row label='Delivery' value={delivery || '—'} />
-            <Row label='State' value={cap(stateVal) || '—'} />
-            <Row label='City' value={city || '—'} />
-            <Row label='Address' value={address || '—'} />
-            <View className='h-px bg-neutral-200 my-3' />
-            <Row label='Total' value={NGN(price)} bold />
-          </View>
-
-          <View className='mt-4 flex-row gap-3'>
-            <Pressable
-              onPress={() => setConfirmOpen(false)}
-              className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+            <ScrollView
+              className='mt-4'
+              keyboardShouldPersistTaps='handled'
+              contentContainerStyle={{ paddingBottom: 10 }}
+              showsVerticalScrollIndicator
             >
-              <Text className='text-neutral-800 font-semibold'>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={doSubmit}
-              className='flex-1 h-12 rounded-xl bg-primary-700 active:bg-primary-800 items-center justify-center'
-            >
-              <Text className='text-white font-extrabold'>Confirm</Text>
-            </Pressable>
+              <View className='rounded-2xl border border-primary-100 bg-primary-50 p-4'>
+                <Row label='Name' value={fullName || '—'} />
+                <Row label='Phone' value={phone || '—'} />
+                <Row label='KG' value={(kg as string) || '—'} />
+                <Row label='Delivery' value={delivery || '—'} />
+                <Row label='State' value={cap(stateVal) || '—'} />
+                <Row label='City' value={city || '—'} />
+                <Row label='Address' value={address || '—'} />
+                <View className='h-px bg-neutral-200 my-3' />
+                <Row label='Total' value={NGN(price)} bold />
+              </View>
+            </ScrollView>
+
+            <View className='mt-4 flex-row gap-3'>
+              <Pressable
+                onPress={() => setConfirmOpen(false)}
+                className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+              >
+                <Text className='text-neutral-800 font-semibold'>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={doSubmit}
+                disabled={loading}
+                className={`flex-1 h-12 rounded-xl items-center justify-center ${
+                  loading ? 'bg-[#9b4a5d]' : 'bg-[#7b0323] active:bg-[#5a0019]'
+                }`}
+              >
+                <Text className='text-white font-extrabold'>
+                  {loading ? 'Submitting...' : 'Confirm'}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
 
-      {/* Success Modal */}
+      {/* Success Modal (bottom anchored) */}
       <Modal
         visible={successOpen}
         transparent
         animationType='slide'
         onRequestClose={() => setSuccessOpen(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setSuccessOpen(false)}>
-          <View className='flex-1 bg-black/40' />
-        </TouchableWithoutFeedback>
+        <View className='flex-1 justify-end'>
+          <TouchableWithoutFeedback onPress={() => setSuccessOpen(false)}>
+            <View className='absolute inset-0 bg-black/40' />
+          </TouchableWithoutFeedback>
 
-        <View className='bg-white rounded-t-3xl px-6 pt-6 pb-6 items-center'>
-          <View className='w-16 h-16 rounded-full bg-primary-50 items-center justify-center mb-3'>
-            <Ionicons name='checkmark' size={36} color='#020084' />
-          </View>
-          <Text className='text-xl font-extrabold text-neutral-900'>
-            Order Placed
-          </Text>
-          <Text className='text-neutral-600 text-center mt-2'>
-            We’ll contact you shortly to fulfill your refill request.
-          </Text>
+          <View className='bg-white rounded-t-3xl px-6 pt-6 pb-6 items-center'>
+            <View className='w-16 h-16 rounded-full bg-primary-50 items-center justify-center mb-3'>
+              <Ionicons name='checkmark' size={36} color='#7b0323' />
+            </View>
+            <Text className='text-xl font-extrabold text-neutral-900'>
+              Order Placed
+            </Text>
+            <Text className='text-neutral-600 text-center mt-2'>
+              We’ll contact you shortly to fulfill your refill request.
+            </Text>
 
-          <View className='mt-5 w-full flex-row gap-3'>
-            <Pressable
-              onPress={() => setSuccessOpen(false)}
-              className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
-            >
-              <Text className='text-neutral-800 font-semibold'>Done</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                setSuccessOpen(false);
-                router.replace('/(tabs)/orders');
-              }}
-              className='flex-1 h-12 rounded-xl bg-primary-700 active:bg-primary-800 items-center justify-center'
-            >
-              <Text className='text-white font-extrabold'>View Orders</Text>
-            </Pressable>
+            <View className='mt-5 w-full flex-row gap-3'>
+              <Pressable
+                onPress={() => setSuccessOpen(false)}
+                className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+              >
+                <Text className='text-neutral-800 font-semibold'>Done</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setSuccessOpen(false);
+                  router.replace('/(tabs)/orders');
+                }}
+                className='flex-1 h-12 rounded-xl bg-[#7b0323] active:bg-[#5a0019] items-center justify-center'
+              >
+                <Text className='text-white font-extrabold'>View Orders</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -426,7 +461,6 @@ export default function BuyGasScreen() {
 }
 
 /* --------------------------- tiny UI helpers --------------------------- */
-
 function Field({
   label,
   children,
@@ -452,7 +486,7 @@ function Select({
   disabled,
 }: {
   label: string;
-  value: string | undefined;
+  value: string;
   display: string;
   onPress: () => void;
   disabled?: boolean;
@@ -505,7 +539,6 @@ function Row({
 }
 
 /* ----------------------------- List Sheet ------------------------------ */
-
 function ListSheet({
   open,
   title,
@@ -519,6 +552,31 @@ function ListSheet({
   onSelect: (v: ListOption) => void;
   onClose: () => void;
 }) {
+  // Normalize once for FlatList
+  const data = useMemo(
+    () =>
+      options.map((opt) =>
+        typeof opt === 'string' ? { label: opt, value: opt } : opt
+      ),
+    [options]
+  );
+
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: { label: string; value: string };
+    index: number;
+  }) => (
+    <Pressable
+      onPress={() => onSelect(item)}
+      className='h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 active:bg-neutral-100 mb-2 flex-row items-center justify-between'
+    >
+      <Text className='text-neutral-900'>{item.label}</Text>
+      <Ionicons name='chevron-forward' size={18} color='#9CA3AF' />
+    </Pressable>
+  );
+
   return (
     <Modal
       transparent
@@ -526,38 +584,42 @@ function ListSheet({
       visible={open}
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View className='flex-1 bg-black/40' />
-      </TouchableWithoutFeedback>
+      {/* Bottom anchored */}
+      <View className='flex-1 justify-end'>
+        {/* Absolute overlay so it doesn't push the sheet off-screen */}
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View className='absolute inset-0 bg-black/40' />
+        </TouchableWithoutFeedback>
 
-      <View className='bg-white rounded-t-3xl px-6 pt-6 pb-4'>
-        <View className='items-center mb-3'>
-          <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
+        {/* Sheet */}
+        <View className='bg-white rounded-t-3xl px-6 pt-6 pb-4 max-h-[70%]'>
+          {/* Handle */}
+          <View className='items-center mb-3'>
+            <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
+          </View>
+
+          <Text className='text-lg font-extrabold text-neutral-900 mb-2'>
+            {title}
+          </Text>
+
+          {/* FlatList for long lists */}
+          <FlatList
+            data={data}
+            renderItem={renderItem}
+            keyExtractor={(item, i) => `${item.value}-${i}`}
+            showsVerticalScrollIndicator
+            keyboardShouldPersistTaps='handled'
+            contentContainerStyle={{ paddingBottom: 10 }}
+          />
+
+          {/* Close Button */}
+          <Pressable
+            onPress={onClose}
+            className='mt-2 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+          >
+            <Text className='text-neutral-800 font-semibold'>Close</Text>
+          </Pressable>
         </View>
-        <Text className='text-lg font-extrabold text-neutral-900 mb-2'>
-          {title}
-        </Text>
-
-        {options.map((opt, i) => {
-          const label = typeof opt === 'string' ? opt : opt.label;
-          return (
-            <Pressable
-              key={`${label}-${i}`}
-              onPress={() => onSelect(opt)}
-              className='h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 active:bg-neutral-100 mb-2 flex-row items-center justify-between'
-            >
-              <Text className='text-neutral-900'>{label}</Text>
-              <Ionicons name='chevron-forward' size={18} color='#9CA3AF' />
-            </Pressable>
-          );
-        })}
-
-        <Pressable
-          onPress={onClose}
-          className='mt-2 h-12 rounded-xl border border-neutral-200 items-center justify-center'
-        >
-          <Text className='text-neutral-800 font-semibold'>Close</Text>
-        </Pressable>
       </View>
     </Modal>
   );

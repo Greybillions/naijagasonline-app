@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   Pressable,
   Modal,
   TouchableWithoutFeedback,
+  Dimensions,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+
+const { height } = Dimensions.get('window');
 
 type Link = {
   label: string;
@@ -18,6 +22,25 @@ type Link = {
 
 export default function HelpBanner() {
   const [open, setOpen] = useState(false);
+
+  // simple pulse animation for CTA
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.08,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [scaleAnim]);
 
   const links: Link[] = [
     {
@@ -35,7 +58,7 @@ export default function HelpBanner() {
       icon: 'build-outline',
       onPress: () => {
         setOpen(false);
-        router.push('/(stack)/home/product/service'); // change to your route
+        router.push('/(stack)/home/product/service');
       },
     },
     {
@@ -44,33 +67,41 @@ export default function HelpBanner() {
       icon: 'people-outline',
       onPress: () => {
         setOpen(false);
-        router.push('/(stack)/home/product/join'); // change to your route
+        router.push('/(stack)/home/product/join');
       },
     },
   ];
 
   return (
     <>
-      {/* Banner */}
-      <View className='mt-4 bg-primary-700 rounded-3xl px-5 py-5'>
-        <Text className='text-white text-lg font-extrabold'>
-          We’re here to help
-        </Text>
-        <Text className='text-primary-100 mt-1'>
-          Certified vendors. Fast delivery.
-        </Text>
-
-        <Pressable
-          onPress={() => setOpen(true)}
-          className='self-start mt-3 bg-white rounded-full px-4 py-2'
-        >
-          <Text className='text-primary-700 font-bold'>
-            How can we help you?
+      {/* Banner (wine background, 60% screen height) */}
+      <View
+        className='mt-4 overflow-hidden rounded-3xl '
+        style={{ height: height * 0.5 }}
+      >
+        <View className='flex-1 bg-[#7b0323] px-6 py-8 justify-center gap-3'>
+          <Text className='text-white text-4xl font-extrabold leading-tight mb-2'>
+            Welcome to {'\n'} NaijaGasOnline
           </Text>
-        </Pressable>
+          <Text className='text-neutral-100 text-lg mb-4'>
+            Your one-stop platform for gas refills, installations, and reliable
+            home delivery {'\n'} — all at your fingertips.
+          </Text>
+
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <Pressable
+              onPress={() => setOpen(true)}
+              className='bg-white self-start rounded-full px-7 py-4 active:opacity-90 shadow-md shadow-black/20'
+            >
+              <Text className='text-[#7b0323] font-extrabold text-lg tracking-wide'>
+                Tap to Get Started!
+              </Text>
+            </Pressable>
+          </Animated.View>
+        </View>
       </View>
 
-      {/* Slide-up sheet */}
+      {/* Slide-up Modal */}
       <Modal
         transparent
         animationType='slide'
@@ -81,17 +112,16 @@ export default function HelpBanner() {
           <View className='flex-1 bg-black/40' />
         </TouchableWithoutFeedback>
 
-        <View className='bg-white rounded-t-3xl px-4 pt-4 pb-6'>
-          {/* drag handle */}
+        <View className='bg-white rounded-t-3xl px-5 pt-5 pb-6'>
           <View className='items-center mb-3'>
             <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
           </View>
 
-          <Text className='text-neutral-900 text-lg font-extrabold mb-2'>
+          <Text className='text-neutral-900 text-lg font-extrabold mb-1'>
             How can we help?
           </Text>
           <Text className='text-neutral-600 mb-4'>
-            Choose an option to continue
+            Select a category below to continue.
           </Text>
 
           {links.map((link) => (
@@ -101,8 +131,8 @@ export default function HelpBanner() {
               className='flex-row items-center justify-between bg-neutral-50 active:bg-neutral-100 border border-neutral-200 rounded-2xl px-4 py-4 mb-2'
             >
               <View className='flex-row items-center flex-1 pr-2'>
-                <View className='w-9 h-9 rounded-full bg-primary-50 items-center justify-center mr-3'>
-                  <Ionicons name={link.icon} size={18} color='#020084' />
+                <View className='w-9 h-9 rounded-full bg-[#7b0323]/10 items-center justify-center mr-3'>
+                  <Ionicons name={link.icon} size={20} color='#7b0323' />
                 </View>
                 <View className='flex-1'>
                   <Text className='text-neutral-900 font-semibold'>

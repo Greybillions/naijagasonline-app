@@ -127,7 +127,7 @@ export default function CartScreen() {
                     </View>
                     <Pressable
                       onPress={applyCoupon}
-                      className='h-12 px-5 rounded-xl bg-primary-700 active:bg-primary-800 items-center justify-center'
+                      className='h-12 px-5 rounded-xl bg-[#7b0323] active:bg-primary-800 items-center justify-center'
                     >
                       <Text className='text-white font-semibold'>Apply</Text>
                     </Pressable>

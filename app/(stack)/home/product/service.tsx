@@ -1,4 +1,4 @@
-// app/(stack)/get-service.tsx  (adjust path to where you want it)
+// app/(stack)/get-service.tsx
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ import { addOrder, LocalOrder } from '@/lib/orders';
 /* ------------------------------ constants ------------------------------ */
 
 type ListOption = string | { label: string; value: string };
+const optVal = (v: ListOption) => (typeof v === 'string' ? v : v.value);
 
 const SERVICE_OPTIONS = [
   'New Cylinder Setup',
@@ -66,14 +68,15 @@ export default function GetServiceScreen() {
   const [successOpen, setSuccessOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const states = useMemo(() => Object.keys(NigerianCities), []);
+  // Sorted keys for nicer UX
+  const states = useMemo(() => Object.keys(NigerianCities).sort(), []);
   const citiesForState = useMemo(
-    () => (stateVal ? (NigerianCities[stateVal] ?? []) : []),
+    () => (stateVal ? [...(NigerianCities[stateVal] ?? [])].sort() : []),
     [stateVal]
   );
 
   const price = useMemo(() => {
-    const n = Number(budget.replace(/[^\d]/g, ''));
+    const n = Number(String(budget).replace(/[^\d]/g, ''));
     return Number.isFinite(n) ? n : 0;
   }, [budget]);
 
@@ -109,7 +112,7 @@ export default function GetServiceScreen() {
       product: [
         {
           id: `svc-${serviceType || 'na'}`,
-          title: `Service: ${serviceType || 'Request'}`, // 👈 appears in Orders
+          title: `Service: ${serviceType || 'Request'}`,
           price,
           qty: 1,
         },
@@ -123,29 +126,25 @@ export default function GetServiceScreen() {
     };
 
     try {
-      // 1) Save locally (source of truth)
       await addOrder(localOrder);
 
-      // 2) Best-effort remote insert (adjust table/columns to your schema)
-      try {
-        await supabase.from('service_requests').insert([
-          {
-            full_name: localOrder.name,
-            phone: localOrder.phonenumber,
-            service_type: serviceType || null,
-            urgency: urgency || null,
-            budget: price || null,
-            notes: notes.trim() || null,
-            address: address.trim(),
-            state: stateVal,
-            city,
-            tx_ref: txRef,
-            status: 'pending',
-          },
-        ]);
-      } catch (e) {
-        console.warn('Remote insert failed (service_requests):', e);
-      }
+      const { error } = await supabase.from('service_requests').insert([
+        {
+          full_name: localOrder.name,
+          phone: localOrder.phonenumber,
+          service_type: serviceType || null,
+          urgency: urgency || null,
+          budget: price || null,
+          notes: notes.trim() || null,
+          address: address.trim(),
+          state: stateVal,
+          city,
+          tx_ref: txRef,
+          status: 'pending',
+        },
+      ]);
+      if (error)
+        console.warn('Remote insert failed (service_requests):', error.message);
 
       // reset + success
       setFullName('');
@@ -177,6 +176,7 @@ export default function GetServiceScreen() {
           className='flex-1'
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 30 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'
         >
           {/* Banner */}
           <View className='mt-4 bg-primary-700 rounded-3xl px-5 py-5'>
@@ -221,7 +221,6 @@ export default function GetServiceScreen() {
               display={serviceType || 'Select Service'}
               onPress={() => setSheetFor('service')}
             />
-
             <Select
               label='Urgency'
               value={urgency}
@@ -319,7 +318,7 @@ export default function GetServiceScreen() {
         options={SERVICE_OPTIONS}
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          setServiceType(v as ServiceType);
+          setServiceType(optVal(v) as ServiceType);
           setSheetFor(null);
         }}
       />
@@ -330,7 +329,7 @@ export default function GetServiceScreen() {
         options={URGENCY_OPTIONS}
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          setUrgency(v as Urgency);
+          setUrgency(optVal(v) as Urgency);
           setSheetFor(null);
         }}
       />
@@ -342,12 +341,12 @@ export default function GetServiceScreen() {
           states.map((s) => ({
             label: cap(s),
             value: s,
-          })) as unknown as readonly ListOption[]
+          })) as readonly ListOption[]
         }
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          const val = typeof v === 'string' ? v : v.value;
-          setStateVal(String(val));
+          const val = optVal(v);
+          setStateVal(val);
           setCity('');
           setSheetFor(null);
         }}
@@ -359,7 +358,8 @@ export default function GetServiceScreen() {
         options={citiesForState}
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          setCity(String(v));
+          const val = optVal(v); // ← FIX: extract value, not String(v)
+          setCity(val);
           setSheetFor(null);
         }}
       />
@@ -524,11 +524,7 @@ function Row({
     <View className='flex-row items-start justify-between py-1.5'>
       <Text className='text-neutral-600 mr-3'>{label}</Text>
       <Text
-        className={`flex-1 text-right ${
-          bold
-            ? 'font-extrabold text-neutral-900'
-            : 'text-neutral-900 font-semibold'
-        }`}
+        className={`flex-1 text-right ${bold ? 'font-extrabold text-neutral-900' : 'text-neutral-900 font-semibold'}`}
         numberOfLines={3}
       >
         {value}
@@ -552,6 +548,15 @@ function ListSheet({
   onSelect: (v: ListOption) => void;
   onClose: () => void;
 }) {
+  // Normalize once for FlatList
+  const data = useMemo(
+    () =>
+      options.map((opt) =>
+        typeof opt === 'string' ? { label: opt, value: opt } : opt
+      ),
+    [options]
+  );
+
   return (
     <Modal
       transparent
@@ -559,38 +564,49 @@ function ListSheet({
       visible={open}
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View className='flex-1 bg-black/40' />
-      </TouchableWithoutFeedback>
+      {/* Bottom anchored */}
+      <View className='flex-1 justify-end'>
+        {/* Absolute overlay so it doesn't push the sheet off-screen */}
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View className='absolute inset-0 bg-black/40' />
+        </TouchableWithoutFeedback>
 
-      <View className='bg-white rounded-t-3xl px-6 pt-6 pb-4'>
-        <View className='items-center mb-3'>
-          <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
+        {/* Sheet */}
+        <View className='bg-white rounded-t-3xl px-6 pt-6 pb-4 max-h-[70%]'>
+          {/* Handle */}
+          <View className='items-center mb-3'>
+            <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
+          </View>
+
+          <Text className='text-lg font-extrabold text-neutral-900 mb-2'>
+            {title}
+          </Text>
+
+          <FlatList
+            data={data}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => onSelect(item)}
+                className='h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 active:bg-neutral-100 mb-2 flex-row items-center justify-between'
+              >
+                <Text className='text-neutral-900'>{item.label}</Text>
+                <Ionicons name='chevron-forward' size={18} color='#9CA3AF' />
+              </Pressable>
+            )}
+            keyExtractor={(item, i) => `${item.value}-${i}`}
+            showsVerticalScrollIndicator
+            keyboardShouldPersistTaps='handled'
+            contentContainerStyle={{ paddingBottom: 10 }}
+          />
+
+          {/* Close Button */}
+          <Pressable
+            onPress={onClose}
+            className='mt-2 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+          >
+            <Text className='text-neutral-800 font-semibold'>Close</Text>
+          </Pressable>
         </View>
-        <Text className='text-lg font-extrabold text-neutral-900 mb-2'>
-          {title}
-        </Text>
-
-        {options.map((opt, i) => {
-          const label = typeof opt === 'string' ? opt : opt.label;
-          return (
-            <Pressable
-              key={`${label}-${i}`}
-              onPress={() => onSelect(opt)}
-              className='h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 active:bg-neutral-100 mb-2 flex-row items-center justify-between'
-            >
-              <Text className='text-neutral-900'>{label}</Text>
-              <Ionicons name='chevron-forward' size={18} color='#9CA3AF' />
-            </Pressable>
-          );
-        })}
-
-        <Pressable
-          onPress={onClose}
-          className='mt-2 h-12 rounded-xl border border-neutral-200 items-center justify-center'
-        >
-          <Text className='text-neutral-800 font-semibold'>Close</Text>
-        </Pressable>
       </View>
     </Modal>
   );
