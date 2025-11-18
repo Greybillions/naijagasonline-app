@@ -1,5 +1,5 @@
 // app/(stack)/buy-gas.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,30 +20,8 @@ import { supabase } from '@/lib/supabase';
 import { NigerianCities } from '@/constants/locationData';
 import { addOrder, LocalOrder } from '@/lib/orders';
 
-/* ------------------------------ constants ------------------------------ */
 type LabeledOption = { label: string; value: string };
 type ListOption = string | LabeledOption;
-
-const KG_OPTIONS = [
-  '3kg',
-  '5kg',
-  '6kg',
-  '10kg',
-  '12.5kg',
-  '25kg',
-  '50kg',
-] as const;
-type KG = (typeof KG_OPTIONS)[number];
-
-const PRICE_TABLE: Record<KG, number> = {
-  '3kg': 3000,
-  '5kg': 5000,
-  '6kg': 6000,
-  '10kg': 10000,
-  '12.5kg': 12500,
-  '25kg': 25000,
-  '50kg': 50000,
-} as const;
 
 const DELIVERY_OPTIONS = ['Door Delivery', 'Pickup'] as const;
 type Delivery = (typeof DELIVERY_OPTIONS)[number];
@@ -51,61 +29,86 @@ type Delivery = (typeof DELIVERY_OPTIONS)[number];
 const NGN = (n: number) => `₦${Number(n || 0).toLocaleString('en-NG')}`;
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-/* -------------------------------- screen ------------------------------- */
 export default function BuyGasScreen() {
   // form
-  const [fullName, setFullName] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
-  const [kg, setKg] = useState<KG | ''>('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [kg, setKg] = useState('');
   const [delivery, setDelivery] = useState<Delivery | ''>('Door Delivery');
-  const [stateVal, setStateVal] = useState<string>('');
-  const [city, setCity] = useState<string>('');
-  const [address, setAddress] = useState<string>('');
+  const [stateVal, setStateVal] = useState('');
+  const [city, setCity] = useState('');
+  const [address, setAddress] = useState('');
 
-  // sheets / modals
   const [sheetFor, setSheetFor] = useState<
     null | 'kg' | 'delivery' | 'state' | 'city'
   >(null);
-  const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
-  const [successOpen, setSuccessOpen] = useState<boolean>(false);
 
-  const [loading, setLoading] = useState<boolean>(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Sorted states for nicer UX
-  const states = useMemo<readonly string[]>(
-    () => Object.keys(NigerianCities).sort(),
-    []
-  );
+  // dynamic gas prices
+  const [priceTable, setPriceTable] = useState<Record<string, number>>({});
+  const [kgList, setKgList] = useState<string[]>([]);
+  const [loadingPrices, setLoadingPrices] = useState(true);
 
-  // Sorted cities for current state
-  const citiesForState = useMemo<readonly string[]>(
+  useEffect(() => {
+    const fetchPrices = async () => {
+      const { data, error } = await supabase
+        .from('gas_prices')
+        .select('kg, amount');
+
+      if (!error && data) {
+        const table: Record<string, number> = {};
+        const kgArr: string[] = [];
+
+        data.forEach((row) => {
+          table[row.kg] = row.amount;
+          kgArr.push(row.kg);
+        });
+
+        setPriceTable(table);
+        setKgList(kgArr.sort());
+      }
+
+      setLoadingPrices(false);
+    };
+
+    fetchPrices();
+  }, []);
+
+  // sorted states
+  const states = useMemo(() => Object.keys(NigerianCities).sort(), []);
+
+  const citiesForState = useMemo(
     () => (stateVal ? (NigerianCities[stateVal] ?? []).slice().sort() : []),
     [stateVal]
   );
 
-  const price = useMemo<number>(() => (kg ? PRICE_TABLE[kg] : 0), [kg]);
+  // computed price
+  const price = useMemo(() => (kg ? priceTable[kg] || 0 : 0), [kg, priceTable]);
 
-  const canSubmit: boolean =
-    !!fullName.trim() &&
-    !!phone.trim() &&
-    !!kg &&
-    !!delivery &&
-    !!stateVal &&
-    !!city &&
-    !!address.trim();
+  const canSubmit =
+    fullName.trim() &&
+    phone.trim() &&
+    kg &&
+    delivery &&
+    stateVal &&
+    city &&
+    address.trim();
 
+  // submit logic
   function onSubmitPress() {
-    if (!canSubmit) return;
-    setConfirmOpen(true);
+    if (canSubmit) setConfirmOpen(true);
   }
 
   async function doSubmit() {
     if (loading) return;
+
     setLoading(true);
     setConfirmOpen(false);
 
-    // --- Build a local order (for Orders tab) ---
-    const txRef = `NGO-${Date.now()}-${Math.floor(Math.random() * 1e5)}`;
+    const txRef = `NGO-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     const nowIso = new Date().toISOString();
 
     const localOrder: LocalOrder = {
@@ -113,10 +116,10 @@ export default function BuyGasScreen() {
       created_at: nowIso,
       name: fullName.trim(),
       phonenumber: phone.trim(),
-      address: [address.trim(), city, cap(stateVal)].filter(Boolean).join(', '),
+      address: [address.trim(), city, cap(stateVal)].join(', '),
       product: [
         {
-          id: `kg-${kg || 'na'}`,
+          id: `kg-${kg}`,
           title: 'Quick Refill',
           price,
           qty: 1,
@@ -132,10 +135,8 @@ export default function BuyGasScreen() {
     };
 
     try {
-      // 1) Save locally (source of truth for Orders page)
       await addOrder(localOrder);
 
-      // 2) Fire-and-forget remote insert to Supabase
       await supabase.from('orders').insert([
         {
           full_name: localOrder.name,
@@ -150,7 +151,7 @@ export default function BuyGasScreen() {
         },
       ]);
 
-      // reset and show success
+      // reset form
       setFullName('');
       setPhone('');
       setKg('');
@@ -159,9 +160,8 @@ export default function BuyGasScreen() {
       setCity('');
       setAddress('');
       setSuccessOpen(true);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Unable to place order.';
-      alert(msg);
+    } catch (e) {
+      alert('Unable to place order: ' + e);
     } finally {
       setLoading(false);
     }
@@ -177,7 +177,10 @@ export default function BuyGasScreen() {
       >
         <ScrollView
           className='flex-1'
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 30 }}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: 30,
+          }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps='handled'
         >
@@ -192,7 +195,7 @@ export default function BuyGasScreen() {
           </View>
 
           {/* Form */}
-          <View className='mt-6 bg-white rounded-3xl border border-neutral-100 p-5'>
+          <View className='mt-6 bg-white rounded-3xl border p-5'>
             <Text className='text-neutral-900 font-extrabold mb-4'>
               Order Details
             </Text>
@@ -221,16 +224,23 @@ export default function BuyGasScreen() {
             {/* KG */}
             <Select
               label='Cylinder Size (KG)'
-              value={kg ?? ''}
-              display={kg ? `${kg} — ${NGN(PRICE_TABLE[kg])}` : 'Select KG'}
-              onPress={() => setSheetFor('kg')}
+              value={kg}
+              display={
+                kg
+                  ? `${kg} — ${NGN(priceTable[kg])}`
+                  : loadingPrices
+                    ? 'Loading...'
+                    : 'Select KG'
+              }
+              onPress={() => !loadingPrices && setSheetFor('kg')}
+              disabled={loadingPrices}
             />
 
             {/* Delivery */}
             <Select
               label='Delivery Option'
-              value={delivery ?? ''}
-              display={delivery || 'Select Delivery'}
+              value={delivery}
+              display={delivery}
               onPress={() => setSheetFor('delivery')}
             />
 
@@ -257,7 +267,7 @@ export default function BuyGasScreen() {
               <TextInput
                 value={address}
                 onChangeText={setAddress}
-                placeholder='House number, street, nearest landmark'
+                placeholder='House number, street, landmark'
                 className='text-base'
                 placeholderTextColor='#9CA3AF'
                 multiline
@@ -267,9 +277,9 @@ export default function BuyGasScreen() {
             </Field>
 
             {/* Price summary */}
-            <View className='mt-1 rounded-xl bg-neutral-50 border border-neutral-200 p-4'>
-              <Row label='Selected KG' value={(kg as string) || '—'} />
-              <Row label='Delivery' value={delivery || '—'} />
+            <View className='mt-1 rounded-xl bg-neutral-50 border p-4'>
+              <Row label='Selected KG' value={kg || '—'} />
+              <Row label='Delivery' value={delivery} />
               <View className='h-px bg-neutral-200 my-3' />
               <Row label='Total' value={NGN(price)} bold />
             </View>
@@ -291,67 +301,65 @@ export default function BuyGasScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Bottom Sheets */}
+      {/* ---------------- Bottom Sheets ---------------- */}
+
+      {/* KG SHEET */}
       <ListSheet
         open={sheetFor === 'kg'}
         title='Select KG'
-        options={
-          KG_OPTIONS.map<ListOption>((k) => ({
-            label: `${k} — ${NGN(PRICE_TABLE[k])}`,
-            value: k,
-          })) as readonly ListOption[]
-        }
+        options={kgList.map((k) => ({
+          label: `${k} — ${NGN(priceTable[k])}`,
+          value: k,
+        }))}
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          const chosen = typeof v === 'string' ? v : v.value;
-          setKg(chosen as KG);
+          const val = typeof v === 'string' ? v : v.value;
+          setKg(val);
           setSheetFor(null);
         }}
       />
 
+      {/* DELIVERY SHEET */}
       <ListSheet
         open={sheetFor === 'delivery'}
         title='Select Delivery Option'
-        options={DELIVERY_OPTIONS as readonly ListOption[]}
+        options={DELIVERY_OPTIONS}
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          const chosen = (typeof v === 'string' ? v : v.value) as Delivery;
-          setDelivery(chosen);
+          const val = typeof v === 'string' ? v : v.value;
+          setDelivery(val as Delivery);
           setSheetFor(null);
         }}
       />
 
+      {/* STATE SHEET */}
       <ListSheet
         open={sheetFor === 'state'}
         title='Select State'
-        options={
-          states.map<ListOption>((s) => ({
-            label: cap(s),
-            value: s,
-          })) as readonly ListOption[]
-        }
+        options={states.map((s) => ({ label: cap(s), value: s }))}
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          const chosen = (typeof v === 'string' ? v : v.value) as string;
-          setStateVal(chosen);
+          const val = typeof v === 'string' ? v : v.value;
+          setStateVal(val);
           setCity('');
           setSheetFor(null);
         }}
       />
 
+      {/* CITY SHEET */}
       <ListSheet
         open={sheetFor === 'city'}
         title={`Select City${stateVal ? ` (${cap(stateVal)})` : ''}`}
-        options={citiesForState as readonly ListOption[]}
+        options={citiesForState}
         onClose={() => setSheetFor(null)}
         onSelect={(v) => {
-          const chosen = (typeof v === 'string' ? v : v.value) as string;
-          setCity(chosen);
+          const val = typeof v === 'string' ? v : v.value;
+          setCity(val);
           setSheetFor(null);
         }}
       />
 
-      {/* Confirm Modal (bottom anchored + scroll-safe) */}
+      {/* Confirm Modal */}
       <Modal
         visible={confirmOpen}
         transparent
@@ -380,7 +388,7 @@ export default function BuyGasScreen() {
               <View className='rounded-2xl border border-primary-100 bg-primary-50 p-4'>
                 <Row label='Name' value={fullName || '—'} />
                 <Row label='Phone' value={phone || '—'} />
-                <Row label='KG' value={(kg as string) || '—'} />
+                <Row label='KG' value={kg || '—'} />
                 <Row label='Delivery' value={delivery || '—'} />
                 <Row label='State' value={cap(stateVal) || '—'} />
                 <Row label='City' value={city || '—'} />
@@ -413,7 +421,7 @@ export default function BuyGasScreen() {
         </View>
       </Modal>
 
-      {/* Success Modal (bottom anchored) */}
+      {/* Success Modal */}
       <Modal
         visible={successOpen}
         transparent
@@ -429,6 +437,7 @@ export default function BuyGasScreen() {
             <View className='w-16 h-16 rounded-full bg-primary-50 items-center justify-center mb-3'>
               <Ionicons name='checkmark' size={36} color='#7b0323' />
             </View>
+
             <Text className='text-xl font-extrabold text-neutral-900'>
               Order Placed
             </Text>
@@ -443,6 +452,7 @@ export default function BuyGasScreen() {
               >
                 <Text className='text-neutral-800 font-semibold'>Done</Text>
               </Pressable>
+
               <Pressable
                 onPress={() => {
                   setSuccessOpen(false);
@@ -461,6 +471,7 @@ export default function BuyGasScreen() {
 }
 
 /* --------------------------- tiny UI helpers --------------------------- */
+
 function Field({
   label,
   children,
@@ -471,7 +482,7 @@ function Field({
   return (
     <View className='mb-4'>
       <Text className='text-neutral-700 mb-1 font-medium'>{label}</Text>
-      <View className='min-h-[48px] rounded-xl border border-neutral-200 bg-white px-3 justify-center'>
+      <View className='min-h-[48px] rounded-xl border px-3 justify-center bg-white'>
         {children}
       </View>
     </View>
@@ -498,9 +509,7 @@ function Select({
         onPress={onPress}
         disabled={disabled}
         className={`h-12 rounded-xl border px-3 flex-row items-center justify-between ${
-          disabled
-            ? 'border-neutral-200 bg-neutral-100'
-            : 'border-neutral-200 bg-white'
+          disabled ? 'bg-neutral-100' : 'bg-white'
         }`}
       >
         <Text className={value ? 'text-neutral-900' : 'text-neutral-400'}>
@@ -526,11 +535,8 @@ function Row({
       <Text className='text-neutral-600 mr-3'>{label}</Text>
       <Text
         className={`flex-1 text-right ${
-          bold
-            ? 'font-extrabold text-neutral-900'
-            : 'text-neutral-900 font-semibold'
-        }`}
-        numberOfLines={3}
+          bold ? 'font-extrabold' : 'font-semibold'
+        } text-neutral-900`}
       >
         {value}
       </Text>
@@ -538,7 +544,6 @@ function Row({
   );
 }
 
-/* ----------------------------- List Sheet ------------------------------ */
 function ListSheet({
   open,
   title,
@@ -552,29 +557,12 @@ function ListSheet({
   onSelect: (v: ListOption) => void;
   onClose: () => void;
 }) {
-  // Normalize once for FlatList
   const data = useMemo(
     () =>
       options.map((opt) =>
         typeof opt === 'string' ? { label: opt, value: opt } : opt
       ),
     [options]
-  );
-
-  const renderItem = ({
-    item,
-    index,
-  }: {
-    item: { label: string; value: string };
-    index: number;
-  }) => (
-    <Pressable
-      onPress={() => onSelect(item)}
-      className='h-12 px-4 rounded-xl border border-neutral-200 bg-neutral-50 active:bg-neutral-100 mb-2 flex-row items-center justify-between'
-    >
-      <Text className='text-neutral-900'>{item.label}</Text>
-      <Ionicons name='chevron-forward' size={18} color='#9CA3AF' />
-    </Pressable>
   );
 
   return (
@@ -584,16 +572,12 @@ function ListSheet({
       visible={open}
       onRequestClose={onClose}
     >
-      {/* Bottom anchored */}
       <View className='flex-1 justify-end'>
-        {/* Absolute overlay so it doesn't push the sheet off-screen */}
         <TouchableWithoutFeedback onPress={onClose}>
           <View className='absolute inset-0 bg-black/40' />
         </TouchableWithoutFeedback>
 
-        {/* Sheet */}
         <View className='bg-white rounded-t-3xl px-6 pt-6 pb-4 max-h-[70%]'>
-          {/* Handle */}
           <View className='items-center mb-3'>
             <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
           </View>
@@ -602,20 +586,26 @@ function ListSheet({
             {title}
           </Text>
 
-          {/* FlatList for long lists */}
           <FlatList
             data={data}
-            renderItem={renderItem}
-            keyExtractor={(item, i) => `${item.value}-${i}`}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => onSelect(item)}
+                className='h-12 px-4 rounded-xl border bg-neutral-50 active:bg-neutral-100 mb-2 flex-row items-center justify-between'
+              >
+                <Text className='text-neutral-900'>{item.label}</Text>
+                <Ionicons name='chevron-forward' size={18} color='#9CA3AF' />
+              </Pressable>
+            )}
+            keyExtractor={(item) => item.value}
             showsVerticalScrollIndicator
             keyboardShouldPersistTaps='handled'
             contentContainerStyle={{ paddingBottom: 10 }}
           />
 
-          {/* Close Button */}
           <Pressable
             onPress={onClose}
-            className='mt-2 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+            className='mt-2 h-12 rounded-xl border items-center justify-center'
           >
             <Text className='text-neutral-800 font-semibold'>Close</Text>
           </Pressable>

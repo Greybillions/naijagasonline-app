@@ -1,10 +1,19 @@
 // app/index.tsx
-import { View, Text, Pressable, ImageBackground } from 'react-native';
+import { View, Text, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { useEffect } from 'react';
 import { router } from 'expo-router';
+import { MotiView, MotiText, AnimatePresence } from 'moti';
 
-export default function Onboarding() {
+export default function SplashScreen() {
+  // auto navigate to home after delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.replace('/(tabs)/home');
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <SafeAreaView className='flex-1 bg-primary-900'>
       <View className='flex-1 relative'>
@@ -13,58 +22,85 @@ export default function Onboarding() {
           resizeMode='cover'
           className='absolute inset-0'
         >
-          {/* brand overlay */}
-          <View className='absolute inset-0 bg-primary-900/60' />
+          <View className='absolute inset-0 bg-primary-900/70' />
         </ImageBackground>
 
-        <View className='flex-1 justify-end px-6 pb-8'>
-          <Text className='text-white text-4xl font-extrabold tracking-tight leading-tight'>
-            NaijaGasOnline
+        {/* HEADER */}
+        <MotiView
+          from={{ opacity: 0, translateY: -20 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 800 }}
+          className='px-6 pt-8'
+        >
+          <Text className='text-white text-xl font-semibold tracking-wide'>
+            Welcome
           </Text>
-          <Text className='text-primary-100 mt-3 text-lg leading-6 font-medium'>
-            Fast, reliable, and convenient gas delivery{'\n'}right to your
-            doorstep.
-          </Text>
-        </View>
-      </View>
+        </MotiView>
 
-      <View className='px-4 pb-8'>
-        <View className='items-center -mb-8 z-20'>
-          <View className='w-16 h-16 rounded-full bg-white items-center justify-center shadow-sm border border-primary-100'>
-            <Ionicons name='location-outline' size={26} color='#020084' />
-          </View>
-        </View>
-
-        <View className='bg-white rounded-3xl px-6 py-8 pt-12 shadow-xl border border-gray-100'>
-          <View className='items-center'>
-            <Text className='text-xl font-bold text-neutral-900 mb-2'>
-              Ready to Order?
-            </Text>
-            <Text className='text-neutral-600 text-center leading-5 mb-6'>
-              Set your delivery address to get started.
-            </Text>
-
-            <Pressable
-              onPress={() => router.push('/address')}
-              className='w-full h-14 rounded-2xl bg-primary-600 active:bg-primary-700 flex-row items-center justify-center space-x-3 shadow-sm'
+        {/* BRAND BLOCK */}
+        <View className='flex-1 justify-center items-center px-6'>
+          <AnimatePresence>
+            <MotiView
+              from={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ type: 'timing', duration: 900 }}
+              className='items-center'
             >
-              <Ionicons name='navigate-outline' size={20} color='#fff' />
-              <Text className='text-white font-semibold text-lg'>
-                Set Delivery Address
-              </Text>
-            </Pressable>
+              <MotiText
+                from={{ opacity: 0, translateY: 10 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ delay: 300 }}
+                className='text-white text-4xl font-extrabold text-center leading-tight'
+              >
+                NaijaGasOnline
+              </MotiText>
 
-            <Pressable
-              onPress={() => router.replace('/(tabs)/home')}
-              className='mt-4 py-2 px-4'
-            >
-              <Text className='text-neutral-500 text-lg underline'>
-                Skip for now
-              </Text>
-            </Pressable>
-          </View>
+              <MotiText
+                from={{ opacity: 0, translateY: 20 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ delay: 500 }}
+                className='text-primary-100 mt-4 text-lg text-center'
+              >
+                Fast, reliable, and convenient gas delivery.
+              </MotiText>
+            </MotiView>
+          </AnimatePresence>
         </View>
+
+        {/* LOADING DOTS */}
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 900 }}
+          className='items-center pb-10'
+        >
+          <LoadingDots />
+        </MotiView>
       </View>
     </SafeAreaView>
+  );
+}
+
+/* ----------------------- Tiny Loading Animation ----------------------- */
+
+function LoadingDots() {
+  return (
+    <View className='flex-row gap-2'>
+      {[0, 1, 2].map((i) => (
+        <MotiView
+          key={i}
+          from={{ opacity: 0.3, translateY: 0 }}
+          animate={{ opacity: 1, translateY: -4 }}
+          transition={{
+            type: 'timing',
+            duration: 600,
+            loop: true,
+            delay: i * 200,
+          }}
+          className='w-2 h-2 rounded-full bg-white/90'
+        />
+      ))}
+    </View>
   );
 }

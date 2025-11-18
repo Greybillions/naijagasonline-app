@@ -19,7 +19,7 @@ import { useCartStore } from '@/stores/cart.store';
 const NGN = (n: number) => `₦${n.toLocaleString('en-NG')}`;
 
 // Absolute path to the checkout screen (lives at app/(stack)/cart/checkout.tsx)
-const CHECKOUT_ROUTE = '../cart/checkout';
+const CHECKOUT_ROUTE = '/cart/checkout';
 
 export default function CartScreen() {
   const { lines, inc, dec, setCoupon, coupon } = useCartStore();

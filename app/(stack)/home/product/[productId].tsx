@@ -7,7 +7,6 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
-  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,10 +30,8 @@ type Product = {
   state?: string;
   city?: string;
   seller_name?: string;
-
   refill_price?: number | null;
   new_cylinder_price?: number | null;
-
   addons?: string[] | { id: string }[] | null;
 };
 
@@ -45,14 +42,18 @@ export default function ProductScreen() {
 
   const productId: string | undefined = useMemo(() => {
     const raw =
-      (Array.isArray(params.id) ? params.id[0] : (params.id as string)) ??
+      (Array.isArray(params.id) ? params.id[0] : params.id) ??
       (Array.isArray(params.productId)
         ? params.productId[0]
-        : (params.productId as string));
+        : params.productId);
+
     return raw || undefined;
   }, [params]);
 
   const addToCart = useCartStore((s) => s.add);
+  const cartCount = useCartStore((s) =>
+    s.lines.reduce((n, l) => n + (l.qty ?? 0), 0)
+  );
 
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<Product | null>(null);
@@ -60,24 +61,23 @@ export default function ProductScreen() {
   const [option, setOption] = useState<'refill' | 'new' | 'default'>('default');
   const [adding, setAdding] = useState(false);
 
+  /** Fetch product */
   useEffect(() => {
     let mounted = true;
 
     (async () => {
       if (!productId) {
-        if (mounted) {
-          setLoading(false);
-          Alert.alert('Missing product', 'No product id was provided.', [
-            { text: 'OK', onPress: () => router.back() },
-          ]);
-        }
+        setLoading(false);
+        Alert.alert('Missing product', 'No product ID provided.', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
         return;
       }
 
       try {
         setLoading(true);
 
-        // 1) Main product
+        // Product
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -87,21 +87,22 @@ export default function ProductScreen() {
         if (!mounted) return;
 
         if (error) {
-          setLoading(false);
           Alert.alert('Error', error.message);
+          setLoading(false);
           return;
         }
+
         if (!data) {
-          setLoading(false);
           Alert.alert('Not found', 'This product is unavailable.', [
             { text: 'OK', onPress: () => router.back() },
           ]);
+          setLoading(false);
           return;
         }
 
         setProduct(data);
 
-        // 2) Add-ons (best-effort)
+        // Add-ons
         try {
           const ids = normalizeAddonIds(data.addons);
           if (ids.length) {
@@ -109,21 +110,14 @@ export default function ProductScreen() {
               .from('products')
               .select('*')
               .in('id', ids);
+
             if (mounted && addonRows) setAddons(addonRows);
-          } else {
-            const { data: rel } = await supabase
-              .from('product_addons')
-              .select('addon:products(*)')
-              .eq('product_id', productId);
-            if (mounted && rel?.length) {
-              setAddons(rel.map((r: any) => r.addon).filter(Boolean));
-            }
           }
         } catch {
-          /* ignore */
+          /* ignore add-on errors */
         }
 
-        if (mounted) setLoading(false);
+        setLoading(false);
       } catch (e: any) {
         if (!mounted) return;
         setLoading(false);
@@ -148,33 +142,35 @@ export default function ProductScreen() {
     return product.price ?? 0;
   }, [product, option]);
 
-  function onShare() {
-    if (!product) return;
-    Share.share({
-      title: product.title,
-      message: `${product.title} — ${NGN(activePrice)}`,
-    }).catch(() => {});
-  }
-
   async function handleAddToCart(p: Product) {
     try {
       setAdding(true);
       addToCart({
         id: p.id,
         title: p.title,
-        price: p.price,
+        price: activePrice,
         image: p.image,
       } as any);
+
       Alert.alert('Added to cart', p.title);
     } finally {
       setAdding(false);
     }
   }
 
+  /* ------------------------ Loading STATE ------------------------ */
   if (loading) {
     return (
       <SafeAreaView className='flex-1 bg-neutral-50'>
-        <AppHeader title='Product' onBack={() => router.back()} />
+        <AppHeader
+          title='Product'
+          onBack={() => router.back()}
+          rightAction={{
+            icon: 'cart-outline',
+            badge: cartCount,
+            onPress: () => router.push('/(tabs)/cart'),
+          }}
+        />
         <View className='flex-1 items-center justify-center'>
           <ActivityIndicator size='large' color='#020084' />
           <Text className='text-neutral-600 mt-3'>Loading product...</Text>
@@ -183,10 +179,19 @@ export default function ProductScreen() {
     );
   }
 
+  /* ------------------------ Not FOUND ------------------------ */
   if (!product) {
     return (
       <SafeAreaView className='flex-1 bg-neutral-50'>
-        <AppHeader title='Product' onBack={() => router.back()} />
+        <AppHeader
+          title='Product'
+          onBack={() => router.back()}
+          rightAction={{
+            icon: 'cart-outline',
+            badge: cartCount,
+            onPress: () => router.push('/(tabs)/cart'),
+          }}
+        />
         <View className='flex-1 items-center justify-center px-6'>
           <Text className='text-neutral-900 font-bold text-lg mb-2'>
             Product not found
@@ -204,12 +209,18 @@ export default function ProductScreen() {
     product.image ||
     'https://images.unsplash.com/photo-1542751110-97427bbecf20?q=80&w=800';
 
+  /* ------------------------ MAIN UI ------------------------ */
+
   return (
     <SafeAreaView className='flex-1 bg-neutral-50'>
       <AppHeader
         title='Product'
         onBack={() => router.back()}
-        rightAction={{ icon: 'share-outline', onPress: onShare }}
+        rightAction={{
+          icon: 'cart-outline',
+          badge: cartCount,
+          onPress: () => router.push('/(tabs)/cart'),
+        }}
       />
 
       <ScrollView
@@ -217,7 +228,7 @@ export default function ProductScreen() {
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* hero image */}
+        {/* HERO IMAGE */}
         <View className='mx-4 rounded-3xl overflow-hidden bg-neutral-200'>
           <Image
             source={{ uri: imageUri }}
@@ -226,7 +237,7 @@ export default function ProductScreen() {
           />
         </View>
 
-        {/* title + vendor + prices card */}
+        {/* TITLE / PRICES */}
         <View className='mx-4 -mt-5 bg-white rounded-3xl p-4 border border-neutral-100 shadow-sm'>
           <View className='self-start px-2 py-1 rounded-full bg-primary-50 border border-primary-100 mb-2'>
             <Text className='text-primary-700 text-[12px]'>
@@ -238,7 +249,7 @@ export default function ProductScreen() {
             {product.title}
           </Text>
 
-          {/* two prices */}
+          {/* price block */}
           {hasDualPrices ? (
             <View className='flex-row justify-between mt-3'>
               <View>
@@ -249,6 +260,7 @@ export default function ProductScreen() {
                   {NGN(product.refill_price ?? product.price)}
                 </Text>
               </View>
+
               <View className='items-end'>
                 <Text className='text-neutral-500 text-xs mb-1'>
                   New Cylinder
@@ -268,7 +280,7 @@ export default function ProductScreen() {
           )}
         </View>
 
-        {/* purchase option */}
+        {/* Purchase Option */}
         {hasDualPrices && (
           <View className='mx-4 mt-4 bg-white rounded-2xl p-3 border border-neutral-100'>
             <Text className='text-neutral-900 font-extrabold mb-3'>
@@ -292,7 +304,7 @@ export default function ProductScreen() {
           </View>
         )}
 
-        {/* Add to cart button */}
+        {/* Add-to-cart button */}
         <View className='mx-4 mt-3'>
           <LoadingButton
             onPress={() => handleAddToCart(product)}
@@ -303,24 +315,25 @@ export default function ProductScreen() {
           </LoadingButton>
         </View>
 
-        {/* specs */}
+        {/* Specifications */}
         <View className='mx-4 mt-4 bg-white rounded-2xl border border-neutral-100'>
           <Text className='px-4 pt-4 pb-2 text-neutral-900 font-extrabold'>
             Specifications
           </Text>
-          <SpecRow
-            label='Capacity'
-            value={product.kg ? `${product.kg}` : '—'}
-          />
+
+          <SpecRow label='Capacity' value={product.kg ?? '—'} />
+
           {!!product.subtitle && (
             <SpecRow label='Type' value={product.subtitle} />
           )}
+
           {!!product.state && !!product.city && (
             <SpecRow
               label='Location'
               value={`${product.city}, ${product.state}`}
             />
           )}
+
           {!!product.description && (
             <View className='px-4 py-3 border-t border-neutral-100'>
               <Text className='text-neutral-700'>{product.description}</Text>
@@ -334,6 +347,7 @@ export default function ProductScreen() {
             <Text className='text-neutral-900 font-extrabold mb-3'>
               Add-ons
             </Text>
+
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View className='flex-row gap-3'>
                 {addons.map((a) => (
@@ -352,6 +366,7 @@ export default function ProductScreen() {
                         style={{ width: '100%', height: '100%' }}
                       />
                     </View>
+
                     <View className='p-3'>
                       <Text
                         className='text-neutral-900 font-medium'
@@ -359,9 +374,11 @@ export default function ProductScreen() {
                       >
                         {a.title}
                       </Text>
+
                       <Text className='text-neutral-700 mt-1'>
                         {NGN(a.price)}
                       </Text>
+
                       <Pressable
                         onPress={() => handleAddToCart(a)}
                         className='mt-2 h-9 rounded-full bg-primary-700 active:bg-primary-800 items-center justify-center'
@@ -376,11 +393,12 @@ export default function ProductScreen() {
           </View>
         )}
 
-        {/* delivery estimate */}
+        {/* Delivery Info */}
         <View className='mx-4 mt-4 mb-6 bg-white rounded-2xl p-3 border border-neutral-100 flex-row items-center gap-3'>
           <View className='w-9 h-9 rounded-full bg-primary-50 items-center justify-center'>
             <Ionicons name='bicycle-outline' size={18} color='#020084' />
           </View>
+
           <View>
             <Text className='text-neutral-900 font-semibold'>
               Estimated Delivery
@@ -393,23 +411,14 @@ export default function ProductScreen() {
   );
 }
 
-/** --- Helpers & tiny components --- */
+/* ----------------- Helper Components ----------------- */
 
 function normalizeAddonIds(input: Product['addons']): string[] {
   if (!input) return [];
   if (Array.isArray(input)) {
-    const ids: string[] = [];
-    for (const x of input) {
-      if (typeof x === 'string') ids.push(x);
-      else if (
-        x &&
-        typeof x === 'object' &&
-        'id' in x &&
-        typeof x.id === 'string'
-      )
-        ids.push(x.id);
-    }
-    return ids;
+    return input
+      .map((x) => (typeof x === 'string' ? x : x?.id))
+      .filter(Boolean) as string[];
   }
   return [];
 }
