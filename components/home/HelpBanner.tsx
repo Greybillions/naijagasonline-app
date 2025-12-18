@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height } = Dimensions.get('window');
 
@@ -22,6 +23,7 @@ type Link = {
 
 export default function HelpBanner() {
   const [open, setOpen] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // simple pulse animation for CTA
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -112,7 +114,10 @@ export default function HelpBanner() {
           <View className='flex-1 bg-black/40' />
         </TouchableWithoutFeedback>
 
-        <View className='bg-white rounded-t-3xl px-5 pt-5 pb-6'>
+        <View
+          className='bg-white rounded-t-3xl px-5 pt-5'
+          style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+        >
           <View className='items-center mb-3'>
             <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
           </View>

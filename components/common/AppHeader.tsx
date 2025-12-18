@@ -23,7 +23,7 @@ export function AppHeader({
   onBack,
   rightAction,
   variant = 'default',
-  showBorder = true,
+  showBorder = false,
 }: AppHeaderProps) {
   const isLarge = variant === 'large';
   const isTransparent = variant === 'transparent';
@@ -34,8 +34,8 @@ export function AppHeader({
 
   // Heights kept tight: default row ≈ 44–48pt, large ≈ 60–64pt
   const rowHeightClass = isLarge ? 'h-16' : 'h-12';
-  const titleSizeClass = isLarge ? 'text-xl' : 'text-base'; // smaller than before
-  const subtitleSizeClass = isLarge ? 'text-sm' : 'text-xs'; // compact
+  const titleSizeClass = isLarge ? 'text-xl' : 'text-base';
+  const subtitleSizeClass = isLarge ? 'text-sm' : 'text-xs';
 
   return (
     <>
@@ -43,12 +43,8 @@ export function AppHeader({
         <StatusBar barStyle='dark-content' backgroundColor='white' />
       )}
 
-      <SafeAreaView
-        edges={['bottom']}
-        // Apply ONLY the top inset; avoid extra top/bottom paddings.
-        className={`${bgClass} ${borderClass} pt-4`}
-      >
-        <View className='px-4'>
+      <SafeAreaView edges={['top']} className={`${bgClass} ${borderClass}`}>
+        <View className='px-4 py-3'>
           <View
             className={`flex-row items-center justify-between ${rowHeightClass}`}
           >
@@ -62,15 +58,15 @@ export function AppHeader({
                   accessibilityRole='button'
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name='chevron-back' size={22} color='#374151' />
+                  <Ionicons name='chevron-back' size={24} color='#374151' />
                 </Pressable>
               )}
             </View>
 
-            {/* Center: title + optional subtitle (kept tight) */}
+            {/* Center: title + optional subtitle */}
             <View className='flex-1 items-center justify-center px-2'>
               <Text
-                className={`font-semibold text-neutral-900 text-center ${titleSizeClass}`}
+                className={`font-extrabold text-neutral-900 text-center ${titleSizeClass}`}
                 numberOfLines={1}
               >
                 {title}
@@ -94,7 +90,7 @@ export function AppHeader({
                   accessibilityRole='button'
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name={rightAction.icon} size={20} color='#374151' />
+                  <Ionicons name={rightAction.icon} size={22} color='#374151' />
                   {rightAction.badge && rightAction.badge > 0 && (
                     <View className='absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center'>
                       <Text className='text-white text-[10px] font-bold'>
@@ -112,7 +108,7 @@ export function AppHeader({
   );
 }
 
-/** Keep these convenience variants unchanged */
+/** Convenience variants */
 export const HomeHeader = ({
   cartCount,
   onCartPress,
@@ -122,7 +118,7 @@ export const HomeHeader = ({
 }) => (
   <AppHeader
     title='NaijaGasOnline'
-    variant='large' // only Home should look taller
+    variant='large'
     rightAction={{
       icon: 'cart-outline',
       onPress: onCartPress,
@@ -146,7 +142,7 @@ export const OrdersHeader = ({
 );
 
 export const SettingsHeader = () => (
-  <AppHeader title='Settings' subtitle='Manage your account' />
+  <AppHeader title='Settings' subtitle='Manage your preferences' />
 );
 
 export default AppHeader;

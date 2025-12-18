@@ -31,6 +31,9 @@ type CartState = {
   lines: CartLine[];
   coupon: string | null;
 
+  // ✅ NEW
+  slot: string | null;
+
   add: (p: Product, qty?: number) => void;
   inc: (id: string) => void;
   dec: (id: string) => void;
@@ -39,6 +42,9 @@ type CartState = {
   clear: () => void;
 
   setCoupon: (code: string | null) => void;
+
+  // ✅ NEW
+  setSlot: (slot: string | null) => void;
 };
 
 export const useCartStore = create<CartState>()(
@@ -46,6 +52,9 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       lines: [],
       coupon: null,
+
+      // ✅ NEW
+      slot: null,
 
       add: (p, qty = 1) => {
         set((s) => {
@@ -59,7 +68,7 @@ export const useCartStore = create<CartState>()(
                   title: p.title,
                   price: p.price,
                   image: p.image,
-                  qty: qty,
+                  qty,
                 },
               ],
             };
@@ -85,11 +94,8 @@ export const useCartStore = create<CartState>()(
           if (idx === -1) return s;
           const copy = [...s.lines];
           const next = copy[idx].qty - 1;
-          if (next <= 0) {
-            copy.splice(idx, 1);
-          } else {
-            copy[idx] = { ...copy[idx], qty: next };
-          }
+          if (next <= 0) copy.splice(idx, 1);
+          else copy[idx] = { ...copy[idx], qty: next };
           return { lines: copy };
         }),
 
@@ -106,9 +112,17 @@ export const useCartStore = create<CartState>()(
       remove: (id) =>
         set((s) => ({ lines: s.lines.filter((l) => l.id !== id) })),
 
-      clear: () => set({ lines: [] }),
+      clear: () =>
+        set({
+          lines: [],
+          coupon: null,
+          slot: null, // ✅ reset slot on clear
+        }),
 
       setCoupon: (code) => set({ coupon: code }),
+
+      // ✅ NEW
+      setSlot: (slot) => set({ slot }),
     }),
     {
       name: 'cart-store',
@@ -116,6 +130,7 @@ export const useCartStore = create<CartState>()(
       partialize: (state) => ({
         lines: state.lines,
         coupon: state.coupon,
+        slot: state.slot, // ✅ persist it
       }),
     }
   )

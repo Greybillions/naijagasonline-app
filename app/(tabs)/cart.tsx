@@ -25,7 +25,7 @@ export default function CartScreen() {
   const { lines, inc, dec, setCoupon, coupon } = useCartStore();
   const [couponInput, setCouponInput] = useState('');
 
-  const deliveryFee = 500;
+  const deliveryFee = 3000;
 
   const subtotal = useMemo(
     () => lines.reduce((s, l) => s + l.price * l.qty, 0),

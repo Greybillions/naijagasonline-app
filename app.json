@@ -54,8 +54,6 @@
       },
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ]
     },
@@ -84,14 +82,17 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
+      "router": {
+        "origin": false
+      },
       "eas": {
         "projectId": "4f64cd26-8894-40b1-b00f-a3e80c822225"
       }
@@ -100,7 +101,9 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/4f64cd26-8894-40b1-b00f-a3e80c822225"
+      "url": "https://u.expo.dev/4f64cd26-8894-40b1-b00f-a3e80c822225",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0
     }
   }
 }

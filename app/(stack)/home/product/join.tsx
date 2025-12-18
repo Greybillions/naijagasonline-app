@@ -1,4 +1,5 @@
 // app/join.tsx (or app/(stack)/join.tsx)
+
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -21,16 +22,15 @@ import { JoinRoles, NigerianCities } from '@/constants/locationData';
 export default function JoinScreen() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState(''); // selected role
+  const [role, setRole] = useState('');
   const [message, setMessage] = useState('');
-  const [stateVal, setStateVal] = useState(''); // selected state (key)
-  const [city, setCity] = useState(''); // selected city
+  const [stateVal, setStateVal] = useState('');
+  const [city, setCity] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
 
-  // Local sheet state (single sheet reused for role/state/city)
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetTitle, setSheetTitle] = useState('');
   const [sheetOptions, setSheetOptions] = useState<string[]>([]);
@@ -44,8 +44,7 @@ export default function JoinScreen() {
     [stateVal]
   );
 
-  const roleValid = !!role;
-  const canSubmit = !!fullName.trim() && !!phone.trim() && roleValid;
+  const canSubmit = !!fullName.trim() && !!phone.trim() && !!role;
 
   function openSheet(
     title: string,
@@ -81,7 +80,6 @@ export default function JoinScreen() {
       ]);
       if (error) throw error;
 
-      // clear
       setFullName('');
       setPhone('');
       setRole('');
@@ -98,17 +96,23 @@ export default function JoinScreen() {
   }
 
   return (
-    <SafeAreaView className='flex-1 bg-neutral-50'>
+    <SafeAreaView className='flex-1 bg-neutral-50' edges={['top']}>
       <AppHeader title='Join Us' onBack={() => router.back()} />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className='flex-1'
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <ScrollView
-          className='flex-1'
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 30 }}
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: 40,
+          }}
+          keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior='automatic'
         >
           {/* Banner */}
           <View className='mt-4 bg-primary-700 rounded-3xl px-5 py-5'>
@@ -147,7 +151,6 @@ export default function JoinScreen() {
               />
             </Field>
 
-            {/* Role (sheet) */}
             <Field label='Role'>
               <Pressable
                 onPress={() =>
@@ -164,7 +167,6 @@ export default function JoinScreen() {
               </Pressable>
             </Field>
 
-            {/* State (sheet) */}
             <Field label='State'>
               <Pressable
                 onPress={() =>
@@ -172,9 +174,7 @@ export default function JoinScreen() {
                     'Select State',
                     states.map((s) => s.toUpperCase()),
                     (v) => {
-                      // Convert display (UPPERCASE) back to key (lowercase)
-                      const key = v.toLowerCase();
-                      setStateVal(key);
+                      setStateVal(v.toLowerCase());
                       setCity('');
                     }
                   )
@@ -190,7 +190,6 @@ export default function JoinScreen() {
               </Pressable>
             </Field>
 
-            {/* City (sheet) */}
             <Field label='City'>
               <Pressable
                 disabled={!stateVal}
@@ -215,11 +214,12 @@ export default function JoinScreen() {
                 value={message}
                 onChangeText={setMessage}
                 placeholder='Tell us a bit about yourself…'
-                className='text-base'
                 placeholderTextColor='#9CA3AF'
+                className='text-base min-h-[80px]'
                 multiline
-                numberOfLines={3}
+                scrollEnabled
                 textAlignVertical='top'
+                returnKeyType='done'
               />
             </Field>
 
@@ -240,7 +240,7 @@ export default function JoinScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Reusable Select Sheet */}
+      {/* ---------- Select Sheet ---------- */}
       <SelectSheet
         open={sheetOpen}
         title={sheetTitle}
@@ -252,89 +252,78 @@ export default function JoinScreen() {
         }}
       />
 
-      {/* Confirm Modal — slide up */}
-      <Modal
-        visible={confirmOpen}
-        transparent
-        animationType='slide'
-        onRequestClose={() => setConfirmOpen(false)}
-      >
+      {/* ---------- Confirm Modal ---------- */}
+      <Modal visible={confirmOpen} transparent animationType='slide'>
         <TouchableWithoutFeedback onPress={() => setConfirmOpen(false)}>
           <View className='flex-1 bg-black/40' />
         </TouchableWithoutFeedback>
 
-        <View className='w-full rounded-t-3xl bg-white px-6 pt-6 pb-5'>
-          <View className='items-center mb-3'>
-            <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
-          </View>
-          <Text className='text-lg font-extrabold text-neutral-900 text-center'>
+        <SafeAreaView
+          edges={['bottom']}
+          className='bg-white rounded-t-3xl px-6 pt-6 pb-6'
+        >
+          <Text className='text-lg font-extrabold text-center'>
             Confirm Request
           </Text>
 
           <View className='mt-4 rounded-2xl border border-primary-100 bg-primary-50 p-4'>
             <Row label='Name' value={fullName || '—'} />
             <Row label='Phone' value={phone || '—'} />
-            <Row label='Role' value={roleValid ? role : '—'} />
+            <Row label='Role' value={role || '—'} />
             <Row
               label='State'
               value={stateVal ? stateVal.toUpperCase() : '—'}
             />
             <Row label='City' value={city || '—'} />
-            {!!message?.trim() && <Row label='Message' value={message} />}
+            {!!message && <Row label='Message' value={message} />}
           </View>
 
           <View className='mt-4 flex-row gap-3'>
             <Pressable
               onPress={() => setConfirmOpen(false)}
-              className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+              className='flex-1 h-12 rounded-xl border items-center justify-center'
             >
-              <Text className='text-neutral-800 font-semibold'>Cancel</Text>
+              <Text>Cancel</Text>
             </Pressable>
             <Pressable
               onPress={doSubmit}
-              className='flex-1 h-12 rounded-xl bg-primary-700 active:bg-primary-800 items-center justify-center'
+              className='flex-1 h-12 rounded-xl bg-primary-700 items-center justify-center'
             >
               <Text className='text-white font-extrabold'>Confirm</Text>
             </Pressable>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
-      {/* Success Modal — slide up */}
-      <Modal
-        visible={successOpen}
-        transparent
-        animationType='slide'
-        onRequestClose={() => setSuccessOpen(false)}
-      >
+      {/* ---------- Success Modal ---------- */}
+      <Modal visible={successOpen} transparent animationType='slide'>
         <TouchableWithoutFeedback onPress={() => setSuccessOpen(false)}>
           <View className='flex-1 bg-black/40' />
         </TouchableWithoutFeedback>
 
-        <View className='w-full rounded-t-3xl bg-white px-6 pt-6 pb-6 items-center'>
-          <View className='w-16 h-16 rounded-full bg-primary-50 items-center justify-center mb-3'>
-            <Ionicons name='checkmark' size={36} color='#020084' />
-          </View>
-          <Text className='text-xl font-extrabold text-neutral-900'>
-            Request Sent
-          </Text>
-          <Text className='text-neutral-600 text-center mt-2'>
-            Thanks! We’ll reach out soon to discuss your application.
+        <SafeAreaView
+          edges={['bottom']}
+          className='bg-white rounded-t-3xl px-6 pt-6 pb-6 items-center'
+        >
+          <Ionicons name='checkmark-circle' size={64} color='#020084' />
+          <Text className='text-xl font-extrabold mt-2'>Request Sent</Text>
+          <Text className='text-neutral-600 text-center mt-1'>
+            We’ll reach out soon.
           </Text>
 
           <Pressable
             onPress={() => setSuccessOpen(false)}
-            className='mt-5 w-full h-12 rounded-xl bg-primary-700 active:bg-primary-800 items-center justify-center'
+            className='mt-5 w-full h-12 rounded-xl bg-primary-700 items-center justify-center'
           >
             <Text className='text-white font-extrabold'>Done</Text>
           </Pressable>
-        </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
 }
 
-/* ----------------------------- tiny building blocks ---------------------------- */
+/* ---------- Helpers ---------- */
 
 function Field({
   label,
@@ -355,19 +344,14 @@ function Field({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <View className='flex-row items-start justify-between py-1.5'>
-      <Text className='text-neutral-600 mr-3'>{label}</Text>
-      <Text
-        className='flex-1 text-right text-neutral-900 font-semibold'
-        numberOfLines={3}
-      >
+    <View className='flex-row justify-between py-1.5'>
+      <Text className='text-neutral-600'>{label}</Text>
+      <Text className='text-neutral-900 font-semibold text-right flex-1 ml-3'>
         {value}
       </Text>
     </View>
   );
 }
-
-/* ------------------------------ Reusable Select Sheet ----------------------------- */
 
 function SelectSheet({
   open,
@@ -383,21 +367,16 @@ function SelectSheet({
   onSelect: (v: string) => void;
 }) {
   return (
-    <Modal
-      visible={open}
-      transparent
-      animationType='slide'
-      onRequestClose={onClose}
-    >
+    <Modal visible={open} transparent animationType='slide'>
       <TouchableWithoutFeedback onPress={onClose}>
         <View className='flex-1 bg-black/40' />
       </TouchableWithoutFeedback>
 
-      <View className='w-full bg-white rounded-t-3xl max-h-[70%]'>
-        <View className='items-center pt-3 pb-2'>
-          <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
-        </View>
-        <Text className='text-center text-neutral-900 font-extrabold text-lg mb-2'>
+      <SafeAreaView
+        edges={['bottom']}
+        className='bg-white rounded-t-3xl max-h-[70%]'
+      >
+        <Text className='text-center font-extrabold text-lg mt-3 mb-2'>
           {title}
         </Text>
 
@@ -406,19 +385,13 @@ function SelectSheet({
             <Pressable
               key={opt}
               onPress={() => onSelect(opt)}
-              className='py-3 px-3 mb-2 rounded-xl border border-neutral-200 active:bg-neutral-50 flex-row items-center justify-between'
+              className='py-3 px-3 mb-2 rounded-xl border'
             >
-              <Text className='text-neutral-900'>{opt}</Text>
-              <Ionicons name='chevron-forward' size={16} color='#9CA3AF' />
+              <Text>{opt}</Text>
             </Pressable>
           ))}
-          {options.length === 0 && (
-            <View className='py-6 items-center'>
-              <Text className='text-neutral-500'>No options available</Text>
-            </View>
-          )}
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }

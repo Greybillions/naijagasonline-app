@@ -311,7 +311,7 @@ export default function ProductScreen() {
             loading={adding}
             className='h-12 rounded-2xl bg-primary-700 active:bg-primary-800'
           >
-            Add to Cart
+            <Text className='text-white font-semibold'>Add to Cart</Text>
           </LoadingButton>
         </View>
 

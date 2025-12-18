@@ -117,59 +117,59 @@ export default function HomeScreen() {
 
   /* HEADER */
   const renderHeader = () => (
-    <View className='px-4 pt-4 space-y-6'>
-      {/* ★ Clean Hero */}
+    <View className='px-4 pt-4 pb-2'>
+      {/* Hero Section */}
       <MotiView
         from={{ opacity: 0, translateY: -10 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ duration: 500 }}
-        className=' rounded-3xl px-6 py-6 shadow-md'
+        className='rounded-3xl px-2 py-3'
       >
-        <Text className='text-black text-3xl font-extrabold tracking-tight'>
-          NaijaGasOnline
-        </Text>
-        <Text className='text-gray-700 mt-1'>
-          Fast gas refills • Quality cylinders • Instant delivery.
+        <Text className='text-gray-600 mt-1 text-sm'>
+          Fast gas refills • Quality cylinders • Instant delivery
         </Text>
       </MotiView>
 
+      {/* Help Banner */}
       <HelpBanner />
 
-      {/* Categories */}
+      {/* Category Filter Pills */}
       {categories.length > 0 && (
-        <FlatList
-          data={categories}
-          horizontal
-          keyExtractor={(x) => x}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 10 }}
-          ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
-          renderItem={({ item }) => {
-            const active = activeCat === item;
-            return (
-              <Pressable
-                onPress={() =>
-                  setActiveCat((prev) => (prev === item ? null : item))
-                }
-                className={`px-4 h-9 rounded-full border justify-center ${
-                  active
-                    ? 'bg-primary-100 border-primary-300'
-                    : 'bg-white border-neutral-200'
-                }`}
-              >
-                <Text
-                  className={
-                    active
-                      ? 'text-primary-700 font-semibold'
-                      : 'text-neutral-700'
+        <View className='mt-3'>
+          <FlatList
+            data={categories}
+            horizontal
+            keyExtractor={(item) => item}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 8 }}
+            ItemSeparatorComponent={() => <View className='w-2' />}
+            renderItem={({ item }) => {
+              const isActive = activeCat === item;
+              return (
+                <Pressable
+                  onPress={() =>
+                    setActiveCat((prev) => (prev === item ? null : item))
                   }
+                  className={`px-5 h-10 rounded-full border justify-center ${
+                    isActive
+                      ? 'bg-primary-100 border-primary-300'
+                      : 'bg-white border-neutral-200'
+                  }`}
                 >
-                  {item}kg
-                </Text>
-              </Pressable>
-            );
-          }}
-        />
+                  <Text
+                    className={`text-sm ${
+                      isActive
+                        ? 'text-primary-700 font-semibold'
+                        : 'text-neutral-700 font-medium'
+                    }`}
+                  >
+                    {item}kg
+                  </Text>
+                </Pressable>
+              );
+            }}
+          />
+        </View>
       )}
     </View>
   );

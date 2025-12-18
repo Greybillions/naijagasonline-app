@@ -168,12 +168,13 @@ export default function BuyGasScreen() {
   }
 
   return (
-    <SafeAreaView className='flex-1 bg-neutral-50'>
+    <SafeAreaView className='flex-1 bg-neutral-50' edges={['top']}>
       <AppHeader title='Buy Gas Online' onBack={() => router.back()} />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className='flex-1'
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
           className='flex-1'
@@ -195,7 +196,7 @@ export default function BuyGasScreen() {
           </View>
 
           {/* Form */}
-          <View className='mt-6 bg-white rounded-3xl border p-5'>
+          <View className='mt-6 bg-white rounded-3xl p-5'>
             <Text className='text-neutral-900 font-extrabold mb-4'>
               Order Details
             </Text>
@@ -277,7 +278,7 @@ export default function BuyGasScreen() {
             </Field>
 
             {/* Price summary */}
-            <View className='mt-1 rounded-xl bg-neutral-50 border p-4'>
+            <View className='mt-1 rounded-xl bg-neutral-50 p-4'>
               <Row label='Selected KG' value={kg || '—'} />
               <Row label='Delivery' value={delivery} />
               <View className='h-px bg-neutral-200 my-3' />
@@ -366,59 +367,63 @@ export default function BuyGasScreen() {
         animationType='slide'
         onRequestClose={() => setConfirmOpen(false)}
       >
-        <View className='flex-1 justify-end'>
-          <TouchableWithoutFeedback onPress={() => setConfirmOpen(false)}>
-            <View className='absolute inset-0 bg-black/40' />
-          </TouchableWithoutFeedback>
+        <SafeAreaView className='flex-1' edges={['bottom']}>
+          <View className='flex-1 justify-end'>
+            <TouchableWithoutFeedback onPress={() => setConfirmOpen(false)}>
+              <View className='absolute inset-0 bg-black/40' />
+            </TouchableWithoutFeedback>
 
-          <View className='bg-white rounded-t-3xl px-6 pt-6 pb-5 max-h-[70%]'>
-            <View className='items-center mb-3'>
-              <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
-            </View>
-            <Text className='text-lg font-extrabold text-neutral-900 text-center'>
-              Confirm Order
-            </Text>
-
-            <ScrollView
-              className='mt-4'
-              keyboardShouldPersistTaps='handled'
-              contentContainerStyle={{ paddingBottom: 10 }}
-              showsVerticalScrollIndicator
-            >
-              <View className='rounded-2xl border border-primary-100 bg-primary-50 p-4'>
-                <Row label='Name' value={fullName || '—'} />
-                <Row label='Phone' value={phone || '—'} />
-                <Row label='KG' value={kg || '—'} />
-                <Row label='Delivery' value={delivery || '—'} />
-                <Row label='State' value={cap(stateVal) || '—'} />
-                <Row label='City' value={city || '—'} />
-                <Row label='Address' value={address || '—'} />
-                <View className='h-px bg-neutral-200 my-3' />
-                <Row label='Total' value={NGN(price)} bold />
+            <View className='bg-white rounded-t-3xl px-6 pt-6 pb-5 max-h-[70%]'>
+              <View className='items-center mb-3'>
+                <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
               </View>
-            </ScrollView>
+              <Text className='text-lg font-extrabold text-neutral-900 text-center'>
+                Confirm Order
+              </Text>
 
-            <View className='mt-4 flex-row gap-3'>
-              <Pressable
-                onPress={() => setConfirmOpen(false)}
-                className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+              <ScrollView
+                className='mt-4'
+                keyboardShouldPersistTaps='handled'
+                contentContainerStyle={{ paddingBottom: 10 }}
+                showsVerticalScrollIndicator
               >
-                <Text className='text-neutral-800 font-semibold'>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={doSubmit}
-                disabled={loading}
-                className={`flex-1 h-12 rounded-xl items-center justify-center ${
-                  loading ? 'bg-[#9b4a5d]' : 'bg-[#7b0323] active:bg-[#5a0019]'
-                }`}
-              >
-                <Text className='text-white font-extrabold'>
-                  {loading ? 'Submitting...' : 'Confirm'}
-                </Text>
-              </Pressable>
+                <View className='rounded-2xl bg-primary-50 p-4'>
+                  <Row label='Name' value={fullName || '—'} />
+                  <Row label='Phone' value={phone || '—'} />
+                  <Row label='KG' value={kg || '—'} />
+                  <Row label='Delivery' value={delivery || '—'} />
+                  <Row label='State' value={cap(stateVal) || '—'} />
+                  <Row label='City' value={city || '—'} />
+                  <Row label='Address' value={address || '—'} />
+                  <View className='h-px bg-neutral-200 my-3' />
+                  <Row label='Total' value={NGN(price)} bold />
+                </View>
+              </ScrollView>
+
+              <View className='mt-4 flex-row gap-3'>
+                <Pressable
+                  onPress={() => setConfirmOpen(false)}
+                  className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
+                >
+                  <Text className='text-neutral-800 font-semibold'>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={doSubmit}
+                  disabled={loading}
+                  className={`flex-1 h-12 rounded-xl items-center justify-center ${
+                    loading
+                      ? 'bg-[#9b4a5d]'
+                      : 'bg-[#7b0323] active:bg-[#5a0019]'
+                  }`}
+                >
+                  <Text className='text-white font-extrabold'>
+                    {loading ? 'Submitting...' : 'Confirm'}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       {/* Success Modal */}
@@ -428,43 +433,45 @@ export default function BuyGasScreen() {
         animationType='slide'
         onRequestClose={() => setSuccessOpen(false)}
       >
-        <View className='flex-1 justify-end'>
-          <TouchableWithoutFeedback onPress={() => setSuccessOpen(false)}>
-            <View className='absolute inset-0 bg-black/40' />
-          </TouchableWithoutFeedback>
+        <SafeAreaView className='flex-1' edges={['bottom']}>
+          <View className='flex-1 justify-end'>
+            <TouchableWithoutFeedback onPress={() => setSuccessOpen(false)}>
+              <View className='absolute inset-0 bg-black/40' />
+            </TouchableWithoutFeedback>
 
-          <View className='bg-white rounded-t-3xl px-6 pt-6 pb-6 items-center'>
-            <View className='w-16 h-16 rounded-full bg-primary-50 items-center justify-center mb-3'>
-              <Ionicons name='checkmark' size={36} color='#7b0323' />
-            </View>
+            <View className='bg-white rounded-t-3xl px-6 pt-6 pb-6 items-center'>
+              <View className='w-16 h-16 rounded-full bg-primary-50 items-center justify-center mb-3'>
+                <Ionicons name='checkmark' size={36} color='#7b0323' />
+              </View>
 
-            <Text className='text-xl font-extrabold text-neutral-900'>
-              Order Placed
-            </Text>
-            <Text className='text-neutral-600 text-center mt-2'>
-              We’ll contact you shortly to fulfill your refill request.
-            </Text>
+              <Text className='text-xl font-extrabold text-neutral-900'>
+                Order Placed
+              </Text>
+              <Text className='text-neutral-600 text-center mt-2'>
+                We&apos;ll contact you shortly to fulfill your refill request.
+              </Text>
 
-            <View className='mt-5 w-full flex-row gap-3'>
-              <Pressable
-                onPress={() => setSuccessOpen(false)}
-                className='flex-1 h-12 rounded-xl border border-neutral-200 items-center justify-center'
-              >
-                <Text className='text-neutral-800 font-semibold'>Done</Text>
-              </Pressable>
+              <View className='mt-5 w-full flex-row gap-3'>
+                <Pressable
+                  onPress={() => setSuccessOpen(false)}
+                  className='flex-1 h-12 rounded-xl bg-neutral-100 items-center justify-center'
+                >
+                  <Text className='text-neutral-800 font-semibold'>Done</Text>
+                </Pressable>
 
-              <Pressable
-                onPress={() => {
-                  setSuccessOpen(false);
-                  router.replace('/(tabs)/orders');
-                }}
-                className='flex-1 h-12 rounded-xl bg-[#7b0323] active:bg-[#5a0019] items-center justify-center'
-              >
-                <Text className='text-white font-extrabold'>View Orders</Text>
-              </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setSuccessOpen(false);
+                    router.replace('/(tabs)/orders');
+                  }}
+                  className='flex-1 h-12 rounded-xl bg-[#7b0323] active:bg-[#5a0019] items-center justify-center'
+                >
+                  <Text className='text-white font-extrabold'>View Orders</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -482,7 +489,7 @@ function Field({
   return (
     <View className='mb-4'>
       <Text className='text-neutral-700 mb-1 font-medium'>{label}</Text>
-      <View className='min-h-[48px] rounded-xl border px-3 justify-center bg-white'>
+      <View className='min-h-[48px] rounded-xl bg-neutral-50 px-3 justify-center'>
         {children}
       </View>
     </View>
@@ -508,8 +515,8 @@ function Select({
       <Pressable
         onPress={onPress}
         disabled={disabled}
-        className={`h-12 rounded-xl border px-3 flex-row items-center justify-between ${
-          disabled ? 'bg-neutral-100' : 'bg-white'
+        className={`h-12 rounded-xl px-3 flex-row items-center justify-between ${
+          disabled ? 'bg-neutral-100' : 'bg-neutral-50'
         }`}
       >
         <Text className={value ? 'text-neutral-900' : 'text-neutral-400'}>
@@ -572,45 +579,47 @@ function ListSheet({
       visible={open}
       onRequestClose={onClose}
     >
-      <View className='flex-1 justify-end'>
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View className='absolute inset-0 bg-black/40' />
-        </TouchableWithoutFeedback>
+      <SafeAreaView className='flex-1' edges={['bottom']}>
+        <View className='flex-1 justify-end'>
+          <TouchableWithoutFeedback onPress={onClose}>
+            <View className='absolute inset-0 bg-black/40' />
+          </TouchableWithoutFeedback>
 
-        <View className='bg-white rounded-t-3xl px-6 pt-6 pb-4 max-h-[70%]'>
-          <View className='items-center mb-3'>
-            <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
+          <View className='bg-white rounded-t-3xl px-6 pt-6 pb-4 max-h-[70%]'>
+            <View className='items-center mb-3'>
+              <View className='w-10 h-1.5 rounded-full bg-neutral-300' />
+            </View>
+
+            <Text className='text-lg font-extrabold text-neutral-900 mb-2'>
+              {title}
+            </Text>
+
+            <FlatList
+              data={data}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => onSelect(item)}
+                  className='h-12 px-4 rounded-xl bg-neutral-50 active:bg-neutral-100 mb-2 flex-row items-center justify-between'
+                >
+                  <Text className='text-neutral-900'>{item.label}</Text>
+                  <Ionicons name='chevron-forward' size={18} color='#9CA3AF' />
+                </Pressable>
+              )}
+              keyExtractor={(item) => item.value}
+              showsVerticalScrollIndicator
+              keyboardShouldPersistTaps='handled'
+              contentContainerStyle={{ paddingBottom: 10 }}
+            />
+
+            <Pressable
+              onPress={onClose}
+              className='mt-2 h-12 rounded-xl bg-neutral-50 items-center justify-center'
+            >
+              <Text className='text-neutral-800 font-semibold'>Close</Text>
+            </Pressable>
           </View>
-
-          <Text className='text-lg font-extrabold text-neutral-900 mb-2'>
-            {title}
-          </Text>
-
-          <FlatList
-            data={data}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => onSelect(item)}
-                className='h-12 px-4 rounded-xl border bg-neutral-50 active:bg-neutral-100 mb-2 flex-row items-center justify-between'
-              >
-                <Text className='text-neutral-900'>{item.label}</Text>
-                <Ionicons name='chevron-forward' size={18} color='#9CA3AF' />
-              </Pressable>
-            )}
-            keyExtractor={(item) => item.value}
-            showsVerticalScrollIndicator
-            keyboardShouldPersistTaps='handled'
-            contentContainerStyle={{ paddingBottom: 10 }}
-          />
-
-          <Pressable
-            onPress={onClose}
-            className='mt-2 h-12 rounded-xl border items-center justify-center'
-          >
-            <Text className='text-neutral-800 font-semibold'>Close</Text>
-          </Pressable>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
